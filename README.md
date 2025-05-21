@@ -1,26 +1,26 @@
-# Price-Drools Service
+# Price Rules AI Drools Service
 
 A microservice that integrates with the Drools rule engine to provide dynamic pricing rule evaluation capabilities.
 
 ## Project Structure
 ```
-price-dools-service/
+price-rules-ai-drools-service/
 ├── src/
 │   ├── main/
 │   │   ├── java/
-│   │   │   └── com.example.pricedools/
+│   │   │   └── com.example.pricerulesaidrools/
 │   │   │       ├── config/
 │   │   │       ├── controller/
 │   │   │       ├── model/
 │   │   │       ├── repository/
 │   │   │       ├── service/
-│   │   │       └── PriceDroolsApplication.java
+│   │   │       └── PriceRulesAIDroolsApplication.java
 │   │   └── resources/
 │   │       ├── application.yml
 │   │       └── rules/
 │   └── test/
 │       └── java/
-│           └── com.example.pricedools/
+│           └── com.example.pricerulesaidools/
 ├── docker/
 │   └── Dockerfile
 ├── .gitignore
@@ -29,7 +29,12 @@ price-dools-service/
 ```
 
 ## Prerequisites
-- Java 17+
+- Java 21+
+- Drools 8.x
+- Spring Boot 3.4.5
+- Spring Cloud 2024.0.0
+- Spring AI 0.1.0
+- Lombok 1.18.28
 - Maven 3.8+
 - Docker (for containerization)
 

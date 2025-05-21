@@ -1,4 +1,4 @@
-# Price-Drools Service PRD
+# Price Rules AI Drools Service PRD
 
 ## Document Control
 

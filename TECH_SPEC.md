@@ -1,4 +1,4 @@
-# Price-Drools Service Technical Specification
+# Price Rules AI Drools Service Technical Specification
 
 ## 1. System Architecture
 
@@ -31,7 +31,7 @@
 ### 1.2 Technology Stack
 
 #### Core Technologies
-- Spring Boot 3.x
+- Spring Boot 3.4.5
 - Java 21+
 - Maven
 - Docker
