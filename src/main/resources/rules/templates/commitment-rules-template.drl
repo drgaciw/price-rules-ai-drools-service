@@ -1,0 +1,190 @@
+package com.example.pricerulesaidrools.rules.templates;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+
+global java.util.logging.Logger logger;
+
+/**
+ * Commitment Rules Template
+ * This template provides a standardized way to create commitment-based rules
+ * with customizable tiers, minimum commitments, and included services.
+ *
+ * Parameters:
+ * - metricField: The financial metric to use (e.g., "arr", "tcv", "acv")
+ * - tier1Min: Minimum value for Tier 1
+ * - tier2Min: Minimum value for Tier 2
+ * - tier3Min: Minimum value for Tier 3
+ * - tier4Min: Minimum value for Tier 4
+ * - tier5Min: Minimum value for Tier 5
+ * - tier1Name: Name for Tier 1
+ * - tier2Name: Name for Tier 2
+ * - tier3Name: Name for Tier 3
+ * - tier4Name: Name for Tier 4
+ * - tier5Name: Name for Tier 5
+ * - tier1CommitmentPercent: Minimum commitment percentage for Tier 1
+ * - tier2CommitmentPercent: Minimum commitment percentage for Tier 2
+ * - tier3CommitmentPercent: Minimum commitment percentage for Tier 3
+ * - tier4CommitmentPercent: Minimum commitment percentage for Tier 4
+ * - tier5CommitmentPercent: Minimum commitment percentage for Tier 5
+ * - ruleName: Base name for the generated rules
+ */
+
+template header
+metricField
+tier1Min
+tier2Min
+tier3Min
+tier4Min
+tier5Min
+tier1Name
+tier2Name
+tier3Name
+tier4Name
+tier5Name
+tier1CommitmentPercent
+tier2CommitmentPercent
+tier3CommitmentPercent
+tier4CommitmentPercent
+tier5CommitmentPercent
+ruleName
+
+template "Commitment Rules"
+
+// Function to calculate minimum commitment based on metric value
+function double calculateMinCommitment(double metricValue, 
+                                      double tier1Min, double tier2Min, double tier3Min, double tier4Min, double tier5Min,
+                                      double tier1CommitmentPercent, double tier2CommitmentPercent, 
+                                      double tier3CommitmentPercent, double tier4CommitmentPercent, double tier5CommitmentPercent) {
+    if (metricValue < tier1Min) {
+        return 0.0; // No minimum commitment for very small customers
+    } else if (metricValue < tier2Min) {
+        return metricValue * (tier1CommitmentPercent / 100.0);
+    } else if (metricValue < tier3Min) {
+        return metricValue * (tier2CommitmentPercent / 100.0);
+    } else if (metricValue < tier4Min) {
+        return metricValue * (tier3CommitmentPercent / 100.0);
+    } else if (metricValue < tier5Min) {
+        return metricValue * (tier4CommitmentPercent / 100.0);
+    } else {
+        return metricValue * (tier5CommitmentPercent / 100.0);
+    }
+}
+
+// Base rule to set minimum commitment
+rule "@{ruleName} Set Minimum Commitment"
+    salience 100 // Higher priority to run before other rules
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{metricField} != null && @{metricField}.doubleValue() > 0)
+        $result : PricingResult(minimumCommitment == null || minimumCommitment == 0)
+    then
+        double metricValue = $metrics.get@{metricField.substring(0,1).toUpperCase()}@{metricField.substring(1)}().doubleValue();
+        double minCommitment = calculateMinCommitment(metricValue, @{tier1Min}, @{tier2Min}, @{tier3Min}, @{tier4Min}, @{tier5Min},
+                                                      @{tier1CommitmentPercent}, @{tier2CommitmentPercent}, 
+                                                      @{tier3CommitmentPercent}, @{tier4CommitmentPercent}, @{tier5CommitmentPercent});
+        
+        if (minCommitment > 0) {
+            logger.info("Setting @{ruleName} minimum commitment to $" + minCommitment + 
+                       " based on @{metricField} of $" + metricValue);
+            
+            $result.setMinimumCommitment(minCommitment);
+            $result.addAppliedRule("@{ruleName} Minimum Commitment");
+            
+            update($result);
+        }
+end
+
+// Tier 1 commitment rule
+rule "@{ruleName} @{tier1Name} Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{metricField} != null && @{metricField}.doubleValue() >= @{tier1Min} && @{metricField}.doubleValue() < @{tier2Min})
+        $result : PricingResult()
+    then
+        logger.info("Applying @{ruleName} @{tier1Name} commitment rule");
+        $result.addAppliedRule("@{ruleName} @{tier1Name} Commitment");
+        $result.setCommitmentTier("@{tier1Name}");
+        update($result);
+end
+
+// Tier 2 commitment rule
+rule "@{ruleName} @{tier2Name} Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{metricField} != null && @{metricField}.doubleValue() >= @{tier2Min} && @{metricField}.doubleValue() < @{tier3Min})
+        $result : PricingResult()
+    then
+        logger.info("Applying @{ruleName} @{tier2Name} commitment rule");
+        $result.addAppliedRule("@{ruleName} @{tier2Name} Commitment");
+        $result.setCommitmentTier("@{tier2Name}");
+        // Basic support for tier 2
+        $result.addIncludedService("Basic Support");
+        update($result);
+end
+
+// Tier 3 commitment rule
+rule "@{ruleName} @{tier3Name} Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{metricField} != null && @{metricField}.doubleValue() >= @{tier3Min} && @{metricField}.doubleValue() < @{tier4Min})
+        $result : PricingResult()
+    then
+        logger.info("Applying @{ruleName} @{tier3Name} commitment rule");
+        $result.addAppliedRule("@{ruleName} @{tier3Name} Commitment");
+        $result.setCommitmentTier("@{tier3Name}");
+        // Standard support for tier 3
+        $result.addIncludedService("Standard Support");
+        update($result);
+end
+
+// Tier 4 commitment rule
+rule "@{ruleName} @{tier4Name} Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{metricField} != null && @{metricField}.doubleValue() >= @{tier4Min} && @{metricField}.doubleValue() < @{tier5Min})
+        $result : PricingResult()
+    then
+        logger.info("Applying @{ruleName} @{tier4Name} commitment rule");
+        $result.addAppliedRule("@{ruleName} @{tier4Name} Commitment");
+        $result.setCommitmentTier("@{tier4Name}");
+        // Premium support for tier 4
+        $result.addIncludedService("Premium Support");
+        update($result);
+end
+
+// Tier 5 commitment rule
+rule "@{ruleName} @{tier5Name} Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{metricField} != null && @{metricField}.doubleValue() >= @{tier5Min})
+        $result : PricingResult()
+    then
+        logger.info("Applying @{ruleName} @{tier5Name} commitment rule");
+        $result.addAppliedRule("@{ruleName} @{tier5Name} Commitment");
+        $result.setCommitmentTier("@{tier5Name}");
+        // All premium services for tier 5
+        $result.addIncludedService("Premium Support");
+        $result.addIncludedService("Dedicated Account Manager");
+        $result.addIncludedService("Priority SLA");
+        update($result);
+end
+
+// Final rule to enforce minimum commitment
+rule "@{ruleName} Enforce Minimum Commitment"
+    salience -90 // Lower priority to run after discount calculations
+    when
+        $request : PricingRequest()
+        $result : PricingResult(minimumCommitment > 0, finalPrice < minimumCommitment)
+    then
+        logger.info("Enforcing @{ruleName} minimum commitment: Adjusting final price from $" + 
+                   $result.getFinalPrice() + " to $" + $result.getMinimumCommitment());
+        
+        $result.setFinalPrice($result.getMinimumCommitment());
+        $result.addAppliedRule("@{ruleName} Minimum Commitment Enforced");
+        
+        update($result);
+end
+
+end template

@@ -1,0 +1,88 @@
+package com.example.pricerulesaidrools.rules;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+import java.math.BigDecimal;
+import java.util.logging.Logger;
+
+global java.util.logging.Logger logger;
+
+/**
+ * TCV Pricing Tier Rules
+ * These rules apply pricing adjustments based on Total Contract Value (TCV) tiers
+ */
+
+rule "TCV Pricing - Low Tier (TCV < $50K)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(tcv < 50000)
+        $result : PricingResult()
+    then
+        logger.info("Applying TCV Low Tier pricing (5% premium)");
+        // For low TCV, apply a small premium
+        $result.setPriceMultiplier($result.getPriceMultiplier() * 1.05);
+        $result.addAppliedRule("TCV Pricing - Low Tier");
+        update($result);
+end
+
+rule "TCV Pricing - Standard Tier (TCV $50K-$200K)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(tcv >= 50000 && tcv < 200000)
+        $result : PricingResult()
+    then
+        logger.info("Applying TCV Standard Tier pricing (no adjustment)");
+        // Standard tier has no price adjustment
+        $result.addAppliedRule("TCV Pricing - Standard Tier");
+        update($result);
+end
+
+rule "TCV Pricing - Premium Tier (TCV $200K-$500K)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(tcv >= 200000 && tcv < 500000)
+        $result : PricingResult()
+    then
+        logger.info("Applying TCV Premium Tier pricing (5% discount)");
+        $result.setDiscount($result.getDiscount() + 0.05);
+        $result.addAppliedRule("TCV Pricing - Premium Tier");
+        update($result);
+end
+
+rule "TCV Pricing - Enterprise Tier (TCV $500K-$1M)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(tcv >= 500000 && tcv < 1000000)
+        $result : PricingResult()
+    then
+        logger.info("Applying TCV Enterprise Tier pricing (10% discount)");
+        $result.setDiscount($result.getDiscount() + 0.10);
+        $result.addAppliedRule("TCV Pricing - Enterprise Tier");
+        update($result);
+end
+
+rule "TCV Pricing - Strategic Tier (TCV $1M+)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(tcv >= 1000000)
+        $result : PricingResult()
+    then
+        logger.info("Applying TCV Strategic Tier pricing (15% discount + premium support)");
+        $result.setDiscount($result.getDiscount() + 0.15);
+        $result.addAppliedRule("TCV Pricing - Strategic Tier");
+        $result.addIncludedService("Premium Support");
+        update($result);
+end
+
+// Rule to ensure that high TCV customers get premium support regardless of other rules
+rule "TCV Premium Support Inclusion"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(tcv >= 500000)
+        $result : PricingResult(includedServices not contains "Premium Support")
+    then
+        logger.info("Adding Premium Support for high TCV customer");
+        $result.addIncludedService("Premium Support");
+        update($result);
+end

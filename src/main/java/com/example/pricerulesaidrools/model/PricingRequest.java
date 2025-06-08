@@ -16,5 +16,6 @@ public class PricingRequest {
     private String productId;
     private String pricingStrategy;
     private int customerTenureMonths;
+    private int contractLengthMonths;
     private FinancialMetrics financialMetrics;
 }

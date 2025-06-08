@@ -1,0 +1,204 @@
+package com.example.pricerulesaidrools.rules;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+import java.math.BigDecimal;
+import java.util.logging.Logger;
+
+global java.util.logging.Logger logger;
+
+/**
+ * ACV Minimum Commitment Rules
+ * These rules enforce minimum commitment amounts based on Annual Contract Value (ACV)
+ */
+
+// Function to calculate minimum commitment based on ACV
+function double calculateMinCommitment(double acv) {
+    if (acv < 10000) {
+        return acv * 0.50; // 50% of ACV for very small contracts
+    } else if (acv < 50000) {
+        return acv * 0.40; // 40% of ACV for small contracts
+    } else if (acv < 100000) {
+        return acv * 0.30; // 30% of ACV for medium contracts
+    } else if (acv < 500000) {
+        return acv * 0.25; // 25% of ACV for large contracts
+    } else {
+        return acv * 0.20; // 20% of ACV for enterprise contracts
+    }
+}
+
+// Base rule to set minimum commitment based on ACV
+rule "Set ACV-Based Minimum Commitment"
+    salience 100 // Higher priority to run before other rules
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(acv > 0)
+        $result : PricingResult(minimumCommitment == null || minimumCommitment == 0)
+    then
+        double minCommitment = calculateMinCommitment($metrics.getAcv().doubleValue());
+        logger.info("Setting minimum commitment to $" + minCommitment + " based on ACV of $" + $metrics.getAcv());
+        $result.setMinimumCommitment(minCommitment);
+        $result.addAppliedRule("ACV Minimum Commitment");
+        update($result);
+end
+
+// Apply minimum commitment for very small ACVs
+rule "Small ACV Minimum Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(acv < 10000)
+        $result : PricingResult()
+    then
+        logger.info("Applying small ACV minimum commitment rule");
+        $result.addAppliedRule("Small ACV Min Commitment");
+        $result.setCommitmentTier("Small");
+        update($result);
+end
+
+// Apply minimum commitment for standard ACVs
+rule "Standard ACV Minimum Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(acv >= 10000 && acv < 50000)
+        $result : PricingResult()
+    then
+        logger.info("Applying standard ACV minimum commitment rule");
+        $result.addAppliedRule("Standard ACV Min Commitment");
+        $result.setCommitmentTier("Standard");
+        update($result);
+end
+
+// Apply loyalty discount for long-term standard customers
+rule "Standard Tier Loyalty Discount"
+    when
+        $request : PricingRequest(customerTenureMonths >= 24)
+        $result : PricingResult(commitmentTier == "Standard")
+    then
+        double loyaltyDiscount = 0.05; // 5% discount for loyal standard customers
+        double discountedMinCommitment = $result.getMinimumCommitment() * (1 - loyaltyDiscount);
+        
+        logger.info("Applying 5% loyalty discount for standard tier customer with " + 
+                   $request.getCustomerTenureMonths() + " months tenure");
+        $result.addAppliedRule("Standard Tier Loyalty Discount");
+        $result.setMinimumCommitment(discountedMinCommitment);
+        
+        update($result);
+end
+
+// Apply minimum commitment for premium ACVs
+rule "Premium ACV Minimum Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(acv >= 50000 && acv < 100000)
+        $result : PricingResult()
+    then
+        logger.info("Applying premium ACV minimum commitment rule");
+        $result.addAppliedRule("Premium ACV Min Commitment");
+        $result.setCommitmentTier("Premium");
+        // Premium customers get basic support included
+        $result.addIncludedService("Basic Support");
+        update($result);
+end
+
+// Apply minimum commitment for enterprise ACVs
+rule "Enterprise ACV Minimum Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(acv >= 100000 && acv < 500000)
+        $result : PricingResult()
+    then
+        logger.info("Applying enterprise ACV minimum commitment rule");
+        $result.addAppliedRule("Enterprise ACV Min Commitment");
+        $result.setCommitmentTier("Enterprise");
+        // Enterprise customers get premium support included
+        $result.addIncludedService("Premium Support");
+        update($result);
+end
+
+// Apply minimum commitment for strategic ACVs
+rule "Strategic ACV Minimum Commitment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(acv >= 500000)
+        $result : PricingResult()
+    then
+        logger.info("Applying strategic ACV minimum commitment rule");
+        $result.addAppliedRule("Strategic ACV Min Commitment");
+        $result.setCommitmentTier("Strategic");
+        // Strategic customers get premium support included
+        $result.addIncludedService("Premium Support");
+        $result.addIncludedService("Dedicated Account Manager");
+        update($result);
+end
+
+// Multi-year commitment discount rule
+rule "Multi-Year Commitment Discount"
+    salience -80 // Run after tier assignment but before minimum enforcement
+    when
+        $request : PricingRequest(contractLengthMonths >= 24)
+        $result : PricingResult(minimumCommitment > 0)
+    then
+        double discount = 0.0;
+        
+        if ($request.getContractLengthMonths() >= 36) {
+            // 15% discount for 3+ year commitments
+            discount = 0.15;
+            logger.info("Applying 15% discount for 3+ year commitment");
+            $result.addAppliedRule("3+ Year Commitment Discount");
+        } else {
+            // 10% discount for 2-year commitments
+            discount = 0.10;
+            logger.info("Applying 10% discount for 2-year commitment");
+            $result.addAppliedRule("2-Year Commitment Discount");
+        }
+        
+        // Apply the discount to the minimum commitment
+        double discountedMinCommitment = $result.getMinimumCommitment() * (1 - discount);
+        logger.info("Reducing minimum commitment from $" + $result.getMinimumCommitment() + 
+                   " to $" + discountedMinCommitment + " due to multi-year commitment");
+        $result.setMinimumCommitment(discountedMinCommitment);
+        
+        update($result);
+end
+
+// High Growth Company Incentive
+rule "High Growth Company Incentive"
+    salience -85 // Run after tier assignment but before minimum enforcement
+    when
+        $request : PricingRequest()
+        $metrics : FinancialMetrics(growthRate != null && growthRate.doubleValue() > 50)
+        $result : PricingResult(minimumCommitment > 0)
+    then
+        double growthDiscount = 0.08; // 8% discount for high-growth companies
+        double discountedMinCommitment = $result.getMinimumCommitment() * (1 - growthDiscount);
+        
+        logger.info("Applying 8% high-growth discount for company with " + 
+                   $metrics.getGrowthRate() + "% growth rate");
+        $result.addAppliedRule("High Growth Company Incentive");
+        $result.setMinimumCommitment(discountedMinCommitment);
+        
+        // Handle null discount description
+        String currentDescription = $result.getDiscountDescription();
+        if (currentDescription == null) {
+            $result.setDiscountDescription("Includes 8% high-growth discount");
+        } else {
+            $result.setDiscountDescription(currentDescription + " (includes 8% high-growth discount)");
+        }
+        
+        update($result);
+end
+
+// Final rule to enforce minimum commitment
+rule "Enforce Minimum Commitment"
+    salience -90 // Lower priority to run after discount calculations
+    when
+        $request : PricingRequest()
+        $result : PricingResult(minimumCommitment > 0, finalPrice < minimumCommitment)
+    then
+        logger.info("Enforcing minimum commitment: Adjusting final price from $" + 
+                   $result.getFinalPrice() + " to $" + $result.getMinimumCommitment());
+        $result.setFinalPrice($result.getMinimumCommitment());
+        $result.addAppliedRule("Minimum Commitment Enforced");
+        update($result);
+end

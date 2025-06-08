@@ -1,0 +1,152 @@
+package com.example.pricerulesaidrools.rules.templates;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+
+global java.util.logging.Logger logger;
+
+/**
+ * Contract Length Incentive Template
+ * This template provides a standardized way to create contract-length based incentives
+ * with customizable duration thresholds and discount percentages.
+ *
+ * Parameters:
+ * - monthsTier1: Minimum months for Tier 1 incentive
+ * - monthsTier2: Minimum months for Tier 2 incentive
+ * - monthsTier3: Minimum months for Tier 3 incentive
+ * - monthsTier4: Minimum months for Tier 4 incentive
+ * - discount1: Discount percentage for Tier 1
+ * - discount2: Discount percentage for Tier 2
+ * - discount3: Discount percentage for Tier 3
+ * - discount4: Discount percentage for Tier 4
+ * - service1: Additional service for Tier 1
+ * - service2: Additional service for Tier 2
+ * - service3: Additional service for Tier 3
+ * - service4: Additional service for Tier 4
+ * - ruleName: Base name for the generated rules
+ */
+
+template header
+monthsTier1
+monthsTier2
+monthsTier3
+monthsTier4
+discount1
+discount2
+discount3
+discount4
+service1
+service2
+service3
+service4
+ruleName
+
+template "Contract Length Incentives"
+
+// Function to calculate contract length discount
+function double calculateContractLengthDiscount(int contractMonths, 
+                                              int monthsTier1, int monthsTier2, int monthsTier3, int monthsTier4,
+                                              double discount1, double discount2, double discount3, double discount4) {
+    if (contractMonths < monthsTier1) {
+        return 0.0; // No discount for short contracts
+    } else if (contractMonths < monthsTier2) {
+        return discount1 / 100.0;
+    } else if (contractMonths < monthsTier3) {
+        return discount2 / 100.0;
+    } else if (contractMonths < monthsTier4) {
+        return discount3 / 100.0;
+    } else {
+        return discount4 / 100.0;
+    }
+}
+
+// Base rule to apply contract length discount
+rule "@{ruleName} Contract Length Discount"
+    salience 60 // Run after basic discounts but before minimum enforcement
+    when
+        $request : PricingRequest(contractLengthMonths > 0)
+        $result : PricingResult()
+    then
+        int contractMonths = $request.getContractLengthMonths();
+        double discount = calculateContractLengthDiscount(contractMonths, 
+                                                        @{monthsTier1}, @{monthsTier2}, @{monthsTier3}, @{monthsTier4},
+                                                        @{discount1}, @{discount2}, @{discount3}, @{discount4});
+        
+        if (discount > 0) {
+            double currentPrice = $result.getFinalPrice();
+            double discountedPrice = currentPrice * (1 - discount);
+            
+            logger.info("Applying @{ruleName} contract length discount: " + (discount * 100) + 
+                       "% discount for " + contractMonths + " month contract");
+            
+            $result.setFinalPrice(discountedPrice);
+            $result.addAppliedRule("@{ruleName} Contract Length Discount");
+            
+            // Update discount description
+            String discountDesc = String.format("Includes %.1f%% multi-year contract discount", discount * 100);
+            if ($result.getDiscountDescription() == null) {
+                $result.setDiscountDescription(discountDesc);
+            } else {
+                $result.setDiscountDescription($result.getDiscountDescription() + "; " + discountDesc);
+            }
+            
+            update($result);
+        }
+end
+
+// Tier 1 contract length rule
+rule "@{ruleName} Tier 1 Contract Services"
+    when
+        $request : PricingRequest(contractLengthMonths >= @{monthsTier1} && contractLengthMonths < @{monthsTier2})
+        $result : PricingResult()
+    then
+        logger.info("Adding @{service1} for @{ruleName} Tier 1 contract");
+        $result.addIncludedService("@{service1}");
+        $result.addAppliedRule("@{ruleName} Tier 1 Contract");
+        update($result);
+end
+
+// Tier 2 contract length rule
+rule "@{ruleName} Tier 2 Contract Services"
+    when
+        $request : PricingRequest(contractLengthMonths >= @{monthsTier2} && contractLengthMonths < @{monthsTier3})
+        $result : PricingResult()
+    then
+        logger.info("Adding services for @{ruleName} Tier 2 contract");
+        $result.addIncludedService("@{service1}");
+        $result.addIncludedService("@{service2}");
+        $result.addAppliedRule("@{ruleName} Tier 2 Contract");
+        update($result);
+end
+
+// Tier 3 contract length rule
+rule "@{ruleName} Tier 3 Contract Services"
+    when
+        $request : PricingRequest(contractLengthMonths >= @{monthsTier3} && contractLengthMonths < @{monthsTier4})
+        $result : PricingResult()
+    then
+        logger.info("Adding services for @{ruleName} Tier 3 contract");
+        $result.addIncludedService("@{service1}");
+        $result.addIncludedService("@{service2}");
+        $result.addIncludedService("@{service3}");
+        $result.addAppliedRule("@{ruleName} Tier 3 Contract");
+        update($result);
+end
+
+// Tier 4 contract length rule
+rule "@{ruleName} Tier 4 Contract Services"
+    when
+        $request : PricingRequest(contractLengthMonths >= @{monthsTier4})
+        $result : PricingResult()
+    then
+        logger.info("Adding services for @{ruleName} Tier 4 contract");
+        $result.addIncludedService("@{service1}");
+        $result.addIncludedService("@{service2}");
+        $result.addIncludedService("@{service3}");
+        $result.addIncludedService("@{service4}");
+        $result.addAppliedRule("@{ruleName} Tier 4 Contract");
+        update($result);
+end
+
+end template

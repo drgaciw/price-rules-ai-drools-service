@@ -1,0 +1,142 @@
+package com.example.pricerulesaidrools.rules;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+import java.math.BigDecimal;
+import java.util.logging.Logger;
+
+global java.util.logging.Logger logger;
+
+/**
+ * Churn Risk Adjustment Rules
+ * These rules adjust pricing based on customer churn risk to improve retention
+ */
+
+// Function to calculate churn risk discount percentage
+function double calculateChurnRiskDiscount(double churnRiskScore) {
+    if (churnRiskScore >= 80) {
+        return 0.20; // 20% discount for extremely high risk (80-100)
+    } else if (churnRiskScore >= 60) {
+        return 0.15; // 15% discount for very high risk (60-79)
+    } else if (churnRiskScore >= 40) {
+        return 0.10; // 10% discount for high risk (40-59)
+    } else if (churnRiskScore >= 30) {
+        return 0.05; // 5% discount for moderate risk (30-39)
+    } else {
+        return 0.0; // No discount for low risk (0-29)
+    }
+}
+
+// Base rule to apply churn risk adjustments
+rule "Apply Churn Risk Adjustment"
+    salience 50 // Run after minimum commitment rules but before enforcement
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(churnRiskScore != null && churnRiskScore.doubleValue() > 0)
+        $result : PricingResult()
+    then
+        double churnRiskScore = $metrics.getChurnRiskScore().doubleValue();
+        double discount = calculateChurnRiskDiscount(churnRiskScore);
+        
+        if (discount > 0) {
+            double currentPrice = $result.getFinalPrice();
+            double adjustedPrice = currentPrice * (1 - discount);
+            
+            logger.info("Applying churn risk adjustment: " + (discount * 100) + 
+                       "% discount due to churn risk score of " + churnRiskScore);
+            
+            $result.setFinalPrice(adjustedPrice);
+            $result.addAppliedRule("Churn Risk Adjustment");
+            
+            // Update discount description
+            String discountDesc = "Includes churn risk reduction of " + (discount * 100) + "%";
+            if ($result.getDiscountDescription() == null) {
+                $result.setDiscountDescription(discountDesc);
+            } else {
+                $result.setDiscountDescription($result.getDiscountDescription() + "; " + discountDesc);
+            }
+            
+            update($result);
+        }
+end
+
+// Rule for high-risk customers with long tenure (special loyalty pricing)
+rule "High Risk Loyal Customer Adjustment"
+    when
+        $request : PricingRequest(customerTenureMonths >= 24, $metrics : financialMetrics)
+        $metrics : FinancialMetrics(churnRiskScore != null && churnRiskScore.doubleValue() >= 40)
+        $result : PricingResult()
+    then
+        // Additional 5% discount for loyal customers at high risk
+        double loyaltyDiscount = 0.05;
+        double currentPrice = $result.getFinalPrice();
+        double adjustedPrice = currentPrice * (1 - loyaltyDiscount);
+        
+        logger.info("Applying loyal high-risk customer adjustment: 5% additional discount " +
+                   "for " + $request.getCustomerTenureMonths() + " months tenure");
+        
+        $result.setFinalPrice(adjustedPrice);
+        $result.addAppliedRule("Loyal High-Risk Customer Adjustment");
+        $result.addIncludedService("Customer Success Manager");
+        
+        update($result);
+end
+
+// Rule to add premium support for very high risk customers
+rule "Add Support for High Churn Risk Customers"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(churnRiskScore != null && churnRiskScore.doubleValue() >= 60)
+        $result : PricingResult(includedServices not contains "Premium Support")
+    then
+        logger.info("Adding Premium Support for high churn risk customer");
+        $result.addIncludedService("Premium Support");
+        $result.addAppliedRule("High Risk Support Package");
+        
+        update($result);
+end
+
+// Rule for customers with increasing churn risk
+rule "Increasing Churn Risk Adjustment"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(churnRiskScore != null && churnRiskScore.doubleValue() > 30, 
+                                   churnTrend != null && churnTrend.equals("INCREASING"))
+        $result : PricingResult()
+    then
+        // Additional 7% discount for customers with increasing churn risk
+        double trendDiscount = 0.07;
+        double currentPrice = $result.getFinalPrice();
+        double adjustedPrice = currentPrice * (1 - trendDiscount);
+        
+        logger.info("Applying increasing churn risk adjustment: 7% additional discount " +
+                   "for customer with increasing churn trend");
+        
+        $result.setFinalPrice(adjustedPrice);
+        $result.addAppliedRule("Increasing Churn Risk Adjustment");
+        $result.addIncludedService("Quarterly Business Review");
+        
+        update($result);
+end
+
+// Enterprise account at risk - maximum discount and executive attention
+rule "Enterprise Account at Risk"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(acv != null && acv.doubleValue() >= 100000, 
+                                   churnRiskScore != null && churnRiskScore.doubleValue() >= 50)
+        $result : PricingResult()
+    then
+        logger.info("Applying enterprise account at risk protocol");
+        $result.addAppliedRule("Enterprise Account Risk Protocol");
+        $result.addIncludedService("Executive Sponsor");
+        $result.addIncludedService("Monthly Executive Business Review");
+        $result.addIncludedService("Dedicated Solution Architect");
+        
+        // Flag for account review (in real system, this would trigger alerts/workflows)
+        logger.warning("HIGH PRIORITY: Enterprise account with $" + $metrics.getAcv() + 
+                     " ACV has high churn risk score of " + $metrics.getChurnRiskScore());
+        
+        update($result);
+end

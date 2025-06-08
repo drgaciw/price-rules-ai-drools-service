@@ -1,0 +1,165 @@
+package com.example.pricerulesaidrools.rules.templates;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+
+global java.util.logging.Logger logger;
+
+/**
+ * Risk Adjustment Rules Template
+ * This template provides a standardized way to create risk-based pricing rules
+ * with customizable risk thresholds, adjustment percentages, and special services.
+ *
+ * Parameters:
+ * - riskField: The risk metric to use (e.g., "churnRiskScore", "creditRiskScore")
+ * - tier1Max: Maximum value for low risk (Tier 1)
+ * - tier2Max: Maximum value for moderate risk (Tier 2)
+ * - tier3Max: Maximum value for high risk (Tier 3)
+ * - tier4Max: Maximum value for very high risk (Tier 4)
+ * - tier1Adjustment: Price adjustment for Tier 1 (percentage)
+ * - tier2Adjustment: Price adjustment for Tier 2 (percentage)
+ * - tier3Adjustment: Price adjustment for Tier 3 (percentage)
+ * - tier4Adjustment: Price adjustment for Tier 4 (percentage)
+ * - tier5Adjustment: Price adjustment for Tier 5 (percentage)
+ * - tier3Service: Special service for Tier 3 customers
+ * - tier4Service: Special service for Tier 4 customers
+ * - tier5Service: Special service for Tier 5 customers
+ * - ruleName: Base name for the generated rules
+ */
+
+template header
+riskField
+tier1Max
+tier2Max
+tier3Max
+tier4Max
+tier1Adjustment
+tier2Adjustment
+tier3Adjustment
+tier4Adjustment
+tier5Adjustment
+tier3Service
+tier4Service
+tier5Service
+ruleName
+
+template "Risk Adjustment Rules"
+
+// Function to calculate risk adjustment percentage
+function double calculateRiskAdjustment(double riskScore, 
+                                       double tier1Max, double tier2Max, double tier3Max, double tier4Max,
+                                       double tier1Adjustment, double tier2Adjustment, 
+                                       double tier3Adjustment, double tier4Adjustment, double tier5Adjustment) {
+    if (riskScore <= tier1Max) {
+        return tier1Adjustment / 100.0;
+    } else if (riskScore <= tier2Max) {
+        return tier2Adjustment / 100.0;
+    } else if (riskScore <= tier3Max) {
+        return tier3Adjustment / 100.0;
+    } else if (riskScore <= tier4Max) {
+        return tier4Adjustment / 100.0;
+    } else {
+        return tier5Adjustment / 100.0;
+    }
+}
+
+// Base rule to apply risk adjustment
+rule "@{ruleName} Risk Adjustment"
+    salience 70 // Run after discount calculations but before final processing
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{riskField} != null && @{riskField}.doubleValue() > 0)
+        $result : PricingResult()
+    then
+        double riskScore = $metrics.get@{riskField.substring(0,1).toUpperCase()}@{riskField.substring(1)}().doubleValue();
+        double adjustment = calculateRiskAdjustment(riskScore, @{tier1Max}, @{tier2Max}, @{tier3Max}, @{tier4Max},
+                                                  @{tier1Adjustment}, @{tier2Adjustment}, 
+                                                  @{tier3Adjustment}, @{tier4Adjustment}, @{tier5Adjustment});
+        
+        if (adjustment != 0) {
+            double currentPrice = $result.getFinalPrice();
+            double adjustedPrice = currentPrice * (1 - adjustment); // negative adjustment = price increase
+            
+            logger.info("Applying @{ruleName} risk adjustment: " + (adjustment * 100) + 
+                       "% adjustment due to @{riskField} of " + riskScore);
+            
+            $result.setFinalPrice(adjustedPrice);
+            $result.addAppliedRule("@{ruleName} Risk Adjustment");
+            
+            // Update adjustment description
+            String adjustmentDesc = String.format("Includes %.1f%% @{ruleName} adjustment", adjustment * 100);
+            if ($result.getDiscountDescription() == null) {
+                $result.setDiscountDescription(adjustmentDesc);
+            } else {
+                $result.setDiscountDescription($result.getDiscountDescription() + "; " + adjustmentDesc);
+            }
+            
+            update($result);
+        }
+end
+
+// Tier 3 risk rule - add special service
+rule "@{ruleName} Tier 3 Risk Services"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{riskField} != null && @{riskField}.doubleValue() > @{tier2Max} && @{riskField}.doubleValue() <= @{tier3Max})
+        $result : PricingResult()
+    then
+        logger.info("Adding @{tier3Service} for @{ruleName} Tier 3 customer");
+        $result.addIncludedService("@{tier3Service}");
+        $result.addAppliedRule("@{ruleName} Tier 3 Service");
+        update($result);
+end
+
+// Tier 4 risk rule - add special service
+rule "@{ruleName} Tier 4 Risk Services"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{riskField} != null && @{riskField}.doubleValue() > @{tier3Max} && @{riskField}.doubleValue() <= @{tier4Max})
+        $result : PricingResult()
+    then
+        logger.info("Adding @{tier4Service} for @{ruleName} Tier 4 customer");
+        $result.addIncludedService("@{tier3Service}");
+        $result.addIncludedService("@{tier4Service}");
+        $result.addAppliedRule("@{ruleName} Tier 4 Service");
+        update($result);
+end
+
+// Tier 5 risk rule - add special service
+rule "@{ruleName} Tier 5 Risk Services"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{riskField} != null && @{riskField}.doubleValue() > @{tier4Max})
+        $result : PricingResult()
+    then
+        logger.info("Adding @{tier5Service} for @{ruleName} Tier 5 customer");
+        $result.addIncludedService("@{tier3Service}");
+        $result.addIncludedService("@{tier4Service}");
+        $result.addIncludedService("@{tier5Service}");
+        $result.addAppliedRule("@{ruleName} Tier 5 Service");
+        update($result);
+end
+
+// Loyalty rule for high-risk customers
+rule "@{ruleName} Loyal Customer Adjustment"
+    when
+        $request : PricingRequest(customerTenureMonths >= 24, $metrics : financialMetrics)
+        $metrics : FinancialMetrics(@{riskField} != null && @{riskField}.doubleValue() > @{tier2Max})
+        $result : PricingResult()
+    then
+        // 5% price improvement for loyal customers with high risk
+        double loyaltyDiscount = 0.05;
+        double currentPrice = $result.getFinalPrice();
+        double adjustedPrice = currentPrice * (1 - loyaltyDiscount);
+        
+        logger.info("Applying @{ruleName} loyal customer adjustment: 5% additional discount " +
+                   "for " + $request.getCustomerTenureMonths() + " months tenure");
+        
+        $result.setFinalPrice(adjustedPrice);
+        $result.addAppliedRule("@{ruleName} Loyal Customer Adjustment");
+        
+        update($result);
+end
+
+end template

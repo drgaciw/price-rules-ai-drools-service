@@ -156,6 +156,8 @@
                 <constraints nullable="false"/>
             </column>
             <column name="churn_risk_score" type="DECIMAL(5,2)" defaultValue="0.00"/>
+            <column name="churn_trend" type="VARCHAR(20)" defaultValue="STABLE"/>
+            <column name="growth_rate" type="DECIMAL(5,2)" defaultValue="0.00"/>
             <column name="contract_months" type="INT" defaultValue="12"/>
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>

@@ -41,6 +41,12 @@ public class FinancialMetrics {
     @Column(name = "churn_risk_score")
     private BigDecimal churnRiskScore;
     
+    @Column(name = "churn_trend")
+    private String churnTrend; // INCREASING, STABLE, DECREASING
+    
+    @Column(name = "growth_rate")
+    private BigDecimal growthRate; // Annual growth rate in percentage
+    
     @Column(name = "contract_months")
     private Integer contractMonths;
     

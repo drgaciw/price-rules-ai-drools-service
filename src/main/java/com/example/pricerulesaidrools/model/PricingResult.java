@@ -16,14 +16,30 @@ public class PricingResult {
     private double discount;
     private double finalPrice;
     private boolean calculationComplete;
+    private double priceMultiplier = 1.0;
+    private String discountDescription;
+    private Double minimumCommitment;
+    private String commitmentTier;
     
     @Builder.Default
     private List<String> appliedRules = new ArrayList<>();
+    
+    @Builder.Default
+    private List<String> includedServices = new ArrayList<>();
     
     public void addAppliedRule(String ruleName) {
         if (appliedRules == null) {
             appliedRules = new ArrayList<>();
         }
         appliedRules.add(ruleName);
+    }
+    
+    public void addIncludedService(String service) {
+        if (includedServices == null) {
+            includedServices = new ArrayList<>();
+        }
+        if (!includedServices.contains(service)) {
+            includedServices.add(service);
+        }
     }
 }

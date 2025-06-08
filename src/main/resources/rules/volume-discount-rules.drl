@@ -1,0 +1,74 @@
+package com.example.pricerulesaidrools.rules;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+import java.math.BigDecimal;
+import java.util.logging.Logger;
+
+global java.util.logging.Logger logger;
+
+/**
+ * Volume Discount Rules
+ * These rules apply discounts based on Annual Recurring Revenue (ARR) tiers
+ */
+
+rule "Volume Discount - Tier 1 (ARR $100K-$250K)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(arr >= 100000 && arr < 250000)
+        $result : PricingResult()
+    then
+        logger.info("Applying Volume Discount Tier 1 (5%)");
+        $result.setDiscount($result.getDiscount() + 0.05);
+        $result.addAppliedRule("Volume Discount - Tier 1");
+        update($result);
+end
+
+rule "Volume Discount - Tier 2 (ARR $250K-$500K)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(arr >= 250000 && arr < 500000)
+        $result : PricingResult()
+    then
+        logger.info("Applying Volume Discount Tier 2 (10%)");
+        $result.setDiscount($result.getDiscount() + 0.10);
+        $result.addAppliedRule("Volume Discount - Tier 2");
+        update($result);
+end
+
+rule "Volume Discount - Tier 3 (ARR $500K-$1M)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(arr >= 500000 && arr < 1000000)
+        $result : PricingResult()
+    then
+        logger.info("Applying Volume Discount Tier 3 (15%)");
+        $result.setDiscount($result.getDiscount() + 0.15);
+        $result.addAppliedRule("Volume Discount - Tier 3");
+        update($result);
+end
+
+rule "Volume Discount - Tier 4 (ARR $1M+)"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(arr >= 1000000)
+        $result : PricingResult()
+    then
+        logger.info("Applying Volume Discount Tier 4 (20%)");
+        $result.setDiscount($result.getDiscount() + 0.20);
+        $result.addAppliedRule("Volume Discount - Tier 4");
+        update($result);
+end
+
+// Rule to add volume discount description to the result
+rule "Volume Discount Description"
+    when
+        $request : PricingRequest($metrics : financialMetrics)
+        $metrics : FinancialMetrics(arr >= 100000)
+        $result : PricingResult(appliedRules contains "Volume Discount")
+    then
+        logger.info("Adding volume discount description to result");
+        $result.setDiscountDescription("Volume discount based on Annual Recurring Revenue tier");
+        update($result);
+end
