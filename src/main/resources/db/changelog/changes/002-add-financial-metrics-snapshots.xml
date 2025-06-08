@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="001-create-financial-metrics-snapshots-table" author="claude">
+        <createTable tableName="financial_metrics_snapshots">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="customer_id" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="snapshot_date" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="arr" type="DECIMAL(19,2)" defaultValue="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tcv" type="DECIMAL(19,2)" defaultValue="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="acv" type="DECIMAL(19,2)" defaultValue="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="clv" type="DECIMAL(19,2)" defaultValue="0.00">
+                <constraints nullable="false"/>
+            </column>
+            <column name="churn_risk_score" type="DECIMAL(5,2)" defaultValue="0.00"/>
+            <column name="growth_rate" type="DECIMAL(5,2)" defaultValue="0.00"/>
+            <column name="quarter" type="VARCHAR(10)"/>
+            <column name="month" type="VARCHAR(10)"/>
+            <column name="snapshot_type" type="VARCHAR(20)"/>
+            <column name="notes" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        
+        <createIndex tableName="financial_metrics_snapshots" indexName="idx_snapshots_customer_id">
+            <column name="customer_id"/>
+        </createIndex>
+        
+        <createIndex tableName="financial_metrics_snapshots" indexName="idx_snapshots_snapshot_date">
+            <column name="snapshot_date"/>
+        </createIndex>
+        
+        <createIndex tableName="financial_metrics_snapshots" indexName="idx_snapshots_quarter">
+            <column name="quarter"/>
+        </createIndex>
+        
+        <createIndex tableName="financial_metrics_snapshots" indexName="idx_snapshots_month">
+            <column name="month"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

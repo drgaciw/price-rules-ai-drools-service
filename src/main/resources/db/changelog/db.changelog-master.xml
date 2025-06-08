@@ -8,5 +8,6 @@
     <!-- Include future changelog files here -->
     <include file="db/changelog/changes/001-initial-schema.xml"/>
     <include file="db/changelog/changes/002-financial-metrics-schema.xml"/>
+    <include file="db/changelog/changes/002-add-financial-metrics-snapshots.xml"/>
     
 </databaseChangeLog>

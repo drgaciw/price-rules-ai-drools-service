@@ -45,7 +45,7 @@
 
 | Task ID | Task Name | Status | Assignee | Start Date | Target Date | Completion Date | Blockers/Notes |
 |---------|-----------|--------|----------|------------|-------------|-----------------|----------------|
-| 3.1 | Financial Metrics Services | COMPLETED | Claude | 06/07/2025 | 06/07/2025 | 06/07/2025 | Implemented financial metrics calculation with ARR, TCV, ACV, CLV, and churn risk scoring |
+| 3.1 | Financial Metrics Services | COMPLETED | Claude | 06/07/2025 | 06/07/2025 | 06/07/2025 | Implemented comprehensive financial metrics calculation with ARR, TCV, ACV, CLV, churn risk scoring, and historical metrics tracking with scheduled snapshots |
 | 3.2 | Pricing Strategy Implementation | COMPLETED | Claude | 06/07/2025 | 06/07/2025 | 06/07/2025 | Implemented volume, value, and risk-adjusted pricing with discount tiers and price multipliers |
 | 3.3 | Financial Metrics APIs | COMPLETED | Claude | 06/07/2025 | 06/07/2025 | 06/07/2025 | Created RESTful APIs for metrics calculation, pricing strategy application, and historical data |
 | 3.4 | Advanced Pricing Rules | COMPLETED | Claude | 06/07/2025 | 06/08/2025 | 06/07/2025 | Implemented comprehensive Drools rules for various pricing strategies |
@@ -118,7 +118,12 @@
   - Task 2.1: Database Schema & Entities with comprehensive JPA entities (Rule, RuleSet, User, Role, RuleAuditLog, RuleExecutionHistory) and repository interfaces for all entities
   - Task 2.2-2.5: Drools configuration, services, APIs, and security components
 - Phase 3 (Financial Metrics & Pricing) fully completed with:
-  - Task 3.1: Financial Metrics Services with comprehensive financial calculations
+  - Task 3.1: Financial Metrics Services with:
+    - Comprehensive financial calculations (ARR, TCV, ACV, CLV)
+    - Multi-factor churn risk scoring (tenure, tickets, payments, frequency)
+    - Historical metrics tracking with time-series analysis
+    - Automated metrics snapshots (daily, weekly, monthly, quarterly, annual)
+    - Trend analysis for growth rates and risk indicators
   - Task 3.2: Pricing Strategy Implementation with volume, value, and risk-adjusted pricing
   - Task 3.3: Financial Metrics APIs with RESTful endpoints for all financial operations
   - Task 3.4: Advanced Pricing Rules including:

@@ -2,9 +2,11 @@ package com.example.pricerulesaidrools.service;
 
 import com.example.pricerulesaidrools.model.Customer;
 import com.example.pricerulesaidrools.model.FinancialMetrics;
+import com.example.pricerulesaidrools.model.FinancialMetricsSnapshot;
 import com.example.pricerulesaidrools.model.Quote;
 import com.example.pricerulesaidrools.repository.CustomerRepository;
 import com.example.pricerulesaidrools.repository.FinancialMetricsRepository;
+import com.example.pricerulesaidrools.repository.FinancialMetricsSnapshotRepository;
 import com.example.pricerulesaidrools.repository.QuoteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +29,7 @@ public class FinancialMetricsCalculator {
     private final FinancialMetricsRepository metricsRepository;
     private final CustomerRepository customerRepository;
     private final QuoteRepository quoteRepository;
+    private final FinancialMetricsSnapshotRepository snapshotRepository;
     
     private static final BigDecimal DEFAULT_AVERAGE_CHURN_RATE = new BigDecimal("0.03"); // 3% monthly churn
     private static final int DEFAULT_CUSTOMER_LIFESPAN = 36; // 3 years average customer lifespan
@@ -243,18 +247,96 @@ public class FinancialMetricsCalculator {
      * 
      * @param customerId The customer ID
      * @param period The time period to look back
-     * @return List of historical financial metrics
+     * @return List of historical financial metrics snapshots
      */
     @Transactional(readOnly = true)
-    public List<FinancialMetrics> getHistoricalMetrics(String customerId, Duration period) {
+    public List<FinancialMetricsSnapshot> getHistoricalMetrics(String customerId, Duration period) {
         LocalDateTime cutoffDate = LocalDateTime.now().minus(period);
+        LocalDateTime endDate = LocalDateTime.now();
         
-        // In a real implementation, this would use a repository method with a date range query
-        // For this implementation, we'll retrieve all quotes for the customer and filter in memory
+        log.info("Retrieving historical metrics for customer {} from {} to {}", 
+                customerId, cutoffDate, endDate);
+        
+        // Get snapshots within date range
+        List<FinancialMetricsSnapshot> snapshots = snapshotRepository.findByCustomerIdAndDateRange(
+                customerId, cutoffDate, endDate);
+        
+        // If snapshots are available, return them
+        if (!snapshots.isEmpty()) {
+            log.info("Found {} historical metrics snapshots for customer {}", snapshots.size(), customerId);
+            return snapshots;
+        }
+        
+        // If no snapshots, generate them from historical quotes
         List<Quote> quotes = quoteRepository.findByCustomerId(customerId);
+        log.info("No snapshots found, generating from {} historical quotes", quotes.size());
         
-        // TODO: Implement repository method with date filtering
-        // Return empty list for now
-        return List.of();
+        // Filter quotes by date
+        List<Quote> filteredQuotes = quotes.stream()
+                .filter(q -> q.getCreatedAt().isAfter(cutoffDate) && q.getCreatedAt().isBefore(endDate))
+                .toList();
+        
+        // Generate metrics from quotes
+        List<FinancialMetricsSnapshot> generatedSnapshots = new ArrayList<>();
+        for (Quote quote : filteredQuotes) {
+            // Calculate metrics for the quote
+            FinancialMetrics metrics = calculateMetricsForHistory(quote);
+            
+            // Create snapshot from metrics
+            FinancialMetricsSnapshot snapshot = FinancialMetricsSnapshot.fromMetrics(
+                    metrics, FinancialMetricsSnapshot.SnapshotType.ON_DEMAND);
+            
+            // Set snapshot date to quote creation date for historical accuracy
+            snapshot.setSnapshotDate(quote.getCreatedAt());
+            
+            // Add notes to identify source
+            snapshot.setNotes("Generated from historical quote " + quote.getQuoteId());
+            
+            // Add to list and save
+            generatedSnapshots.add(snapshot);
+            snapshotRepository.save(snapshot);
+        }
+        
+        log.info("Generated {} historical metrics snapshots for customer {}", generatedSnapshots.size(), customerId);
+        return generatedSnapshots;
+    }
+    
+    /**
+     * Calculate metrics for historical analysis (without saving to main metrics table)
+     */
+    private FinancialMetrics calculateMetricsForHistory(Quote quote) {
+        // Create metrics entity without saving
+        FinancialMetrics metrics = FinancialMetrics.builder()
+                .customerId(quote.getCustomerId())
+                .arr(calculateARR(quote))
+                .tcv(calculateTCV(quote))
+                .acv(calculateACV(quote))
+                .clv(calculateCLV(quote))
+                .churnRiskScore(calculateChurnRiskScore(quote.getCustomerId()))
+                .contractMonths(quote.getDurationInMonths())
+                .build();
+        
+        return metrics;
+    }
+    
+    /**
+     * Create a snapshot of the current metrics for a customer
+     * 
+     * @param customerId The customer ID
+     * @param snapshotType The type of snapshot
+     * @return The created snapshot
+     */
+    @Transactional
+    public FinancialMetricsSnapshot createMetricsSnapshot(String customerId, 
+                                                          FinancialMetricsSnapshot.SnapshotType snapshotType) {
+        // Get current metrics
+        FinancialMetrics metrics = metricsRepository.findByCustomerId(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("No metrics found for customer: " + customerId));
+        
+        // Create snapshot
+        FinancialMetricsSnapshot snapshot = FinancialMetricsSnapshot.fromMetrics(metrics, snapshotType);
+        
+        // Save and return
+        return snapshotRepository.save(snapshot);
     }
 }
