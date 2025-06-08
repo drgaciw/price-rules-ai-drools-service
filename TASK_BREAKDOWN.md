@@ -106,11 +106,11 @@
 
 ### 2.5 Basic Security Setup
 **Acceptance Criteria**:
-- [ ] Spring Security configuration
-- [ ] JWT token generation and validation
-- [ ] Role-based access control (ADMIN, USER, READONLY)
-- [ ] Security for all API endpoints
-- [ ] Authentication filter implementation
+- [x] Spring Security configuration
+- [x] JWT token generation and validation
+- [x] Role-based access control (ADMIN, USER, READONLY)
+- [x] Security for all API endpoints
+- [x] Authentication filter implementation
 
 ---
 
@@ -136,22 +136,22 @@
 
 ### 3.2 Pricing Strategy Implementation
 **Acceptance Criteria**:
-- [ ] `PricingStrategy` interface and implementations
-- [ ] Volume-based pricing strategy
-- [ ] Value-based pricing strategy
-- [ ] Risk-adjusted pricing strategy
-- [ ] Discount tier calculations
-- [ ] Minimum commitment enforcement
-- [ ] Price multiplier logic
+- [x] `PricingStrategy` interface and implementations
+- [x] Volume-based pricing strategy
+- [x] Value-based pricing strategy
+- [x] Risk-adjusted pricing strategy
+- [x] Discount tier calculations
+- [x] Minimum commitment enforcement
+- [x] Price multiplier logic
 
 ### 3.3 Financial Metrics APIs
 **Acceptance Criteria**:
-- [ ] `FinancialMetricsController` implementation
-- [ ] Calculate metrics endpoint (`POST /api/v1/financial-metrics/calculate`)
-- [ ] Apply pricing strategy endpoint (`POST /api/v1/financial-metrics/apply-strategy`)
-- [ ] Historical metrics retrieval endpoint
-- [ ] Request/response DTOs
-- [ ] API validation and error handling
+- [x] `FinancialMetricsController` implementation
+- [x] Calculate metrics endpoint (`POST /api/v1/financial-metrics/calculate`)
+- [x] Apply pricing strategy endpoint (`POST /api/v1/financial-metrics/apply-strategy`)
+- [x] Historical metrics retrieval endpoint
+- [x] Request/response DTOs
+- [x] API validation and error handling
 
 ### 3.4 Advanced Pricing Rules
 **Acceptance Criteria**:

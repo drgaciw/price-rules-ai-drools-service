@@ -1,0 +1,103 @@
+package com.example.pricerulesaidrools.rules;
+
+import com.example.pricerulesaidrools.model.PricingRequest;
+import com.example.pricerulesaidrools.model.PricingResult;
+import com.example.pricerulesaidrools.model.FinancialMetrics;
+
+global java.util.logging.Logger logger;
+
+rule "Volume Discount - Tier 1"
+    when
+        $request : PricingRequest( $metrics : financialMetrics )
+        $metrics : FinancialMetrics( arr >= 10000 && arr < 50000 )
+        $result : PricingResult( )
+    then
+        logger.info("Applying Volume Discount Tier 1 (5%)");
+        $result.setDiscount($result.getDiscount() + 0.05);
+        $result.addAppliedRule("Volume Discount - Tier 1");
+        update($result);
+end
+
+rule "Volume Discount - Tier 2"
+    when
+        $request : PricingRequest( $metrics : financialMetrics )
+        $metrics : FinancialMetrics( arr >= 50000 && arr < 100000 )
+        $result : PricingResult( )
+    then
+        logger.info("Applying Volume Discount Tier 2 (10%)");
+        $result.setDiscount($result.getDiscount() + 0.10);
+        $result.addAppliedRule("Volume Discount - Tier 2");
+        update($result);
+end
+
+rule "Volume Discount - Tier 3"
+    when
+        $request : PricingRequest( $metrics : financialMetrics )
+        $metrics : FinancialMetrics( arr >= 100000 )
+        $result : PricingResult( )
+    then
+        logger.info("Applying Volume Discount Tier 3 (15%)");
+        $result.setDiscount($result.getDiscount() + 0.15);
+        $result.addAppliedRule("Volume Discount - Tier 3");
+        update($result);
+end
+
+rule "Long-term Contract Discount"
+    when
+        $request : PricingRequest( $metrics : financialMetrics )
+        $metrics : FinancialMetrics( contractMonths >= 24 )
+        $result : PricingResult( )
+    then
+        logger.info("Applying Long-term Contract Discount (7%)");
+        $result.setDiscount($result.getDiscount() + 0.07);
+        $result.addAppliedRule("Long-term Contract Discount");
+        update($result);
+end
+
+rule "Customer Loyalty Discount"
+    when
+        $request : PricingRequest( $metrics : financialMetrics, customerTenureMonths >= 24 )
+        $result : PricingResult( )
+    then
+        logger.info("Applying Customer Loyalty Discount (3%)");
+        $result.setDiscount($result.getDiscount() + 0.03);
+        $result.addAppliedRule("Customer Loyalty Discount");
+        update($result);
+end
+
+rule "High CLV Premium Customer"
+    when
+        $request : PricingRequest( $metrics : financialMetrics )
+        $metrics : FinancialMetrics( clv >= 250000 )
+        $result : PricingResult( )
+    then
+        logger.info("Applying High CLV Premium Customer Discount (5%)");
+        $result.setDiscount($result.getDiscount() + 0.05);
+        $result.addAppliedRule("High CLV Premium Customer");
+        update($result);
+end
+
+rule "High Churn Risk Retention Discount"
+    when
+        $request : PricingRequest( $metrics : financialMetrics )
+        $metrics : FinancialMetrics( churnRiskScore >= 0.7 )
+        $result : PricingResult( )
+    then
+        logger.info("Applying High Churn Risk Retention Discount (8%)");
+        $result.setDiscount($result.getDiscount() + 0.08);
+        $result.addAppliedRule("High Churn Risk Retention Discount");
+        update($result);
+end
+
+rule "Calculate Final Price"
+    salience -100 // Execute last
+    when
+        $request : PricingRequest( basePrice > 0 )
+        $result : PricingResult( )
+    then
+        logger.info("Calculating final price with total discount: " + $result.getDiscount());
+        double finalPrice = $request.getBasePrice() * (1.0 - $result.getDiscount());
+        $result.setFinalPrice(finalPrice);
+        $result.setCalculationComplete(true);
+        update($result);
+end

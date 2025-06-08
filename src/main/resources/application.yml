@@ -1,0 +1,176 @@
+spring:
+  application:
+    name: price-rules-ai-drools
+  profiles:
+    active: dev
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/price_rules_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 10
+      minimum-idle: 5
+  redis:
+    host: localhost
+    port: 6379
+    password:
+    database: 0
+    timeout: 60000
+    connect-timeout: 10000
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.xml
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+  security:
+    jwt:
+      secret: ${JWT_SECRET:change-me-in-production-and-use-a-very-long-secret-key}
+      expiration: 86400000 # 24 hours in milliseconds
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 1024
+
+drools:
+  rule-expiration: 3600 # in seconds
+  rule-execution-timeout: 1000 # in milliseconds
+  default-rule-path: classpath:rules/
+  enable-caching: true
+  max-rule-size: 1048576 # 1MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  show-actuator: true
+
+logging:
+  level:
+    root: INFO
+    com.example.pricerulesaidrools: INFO
+    org.springframework: INFO
+    org.hibernate: INFO
+    org.drools: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ./logs/application.log
+    max-size: 10MB
+    max-history: 7
+
+ai:
+  sequential-thinking:
+    url: ${SEQUENTIAL_THINKING_URL:http://localhost:8081/api/sequential-thinking}
+    timeout: 10000 # milliseconds
+  context7:
+    url: ${CONTEXT7_URL:http://localhost:8082/api/context7}
+    timeout: 5000 # milliseconds
+  puppeteer:
+    url: ${PUPPETEER_URL:http://localhost:8083/api/puppeteer}
+    timeout: 30000 # milliseconds
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/price_rules_db
+    username: postgres
+    password: postgres
+  jpa:
+    show-sql: true
+logging:
+  level:
+    com.example.pricerulesaidrools: DEBUG
+    org.springframework: INFO
+    org.hibernate: INFO
+    org.drools: DEBUG
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+  liquibase:
+    enabled: false
+  redis:
+    embedded: true
+drools:
+  enable-caching: false
+server:
+  port: 0
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${JDBC_DATABASE_URL}
+    username: ${JDBC_DATABASE_USERNAME}
+    password: ${JDBC_DATABASE_PASSWORD}
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+    password: ${REDIS_PASSWORD}
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+logging:
+  level:
+    root: WARN
+    com.example.pricerulesaidrools: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+    org.drools: WARN
