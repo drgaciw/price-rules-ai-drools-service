@@ -27,9 +27,6 @@ class SemanticCacheServiceTest {
     @Mock
     private VectorStore vectorStore;
 
-    @Mock
-    private EmbeddingService embeddingService;
-
     private SemanticCacheServiceImpl cacheService;
 
     private static final double SIMILARITY_THRESHOLD = 0.85;
@@ -40,7 +37,7 @@ class SemanticCacheServiceTest {
 
     @BeforeEach
     void setUp() {
-        cacheService = new SemanticCacheServiceImpl(vectorStore, embeddingService);
+        cacheService = new SemanticCacheServiceImpl(vectorStore);
 
         // Set configuration values using reflection
         ReflectionTestUtils.setField(cacheService, "similarityThreshold", SIMILARITY_THRESHOLD);
@@ -292,10 +289,10 @@ class SemanticCacheServiceTest {
         // This tests the core semantic caching functionality
 
         String[] similarQueries = {
-            "What is the pricing for an enterprise deal?",
-            "What is enterprise deal pricing?",
-            "How much does an enterprise deal cost?",
-            "Tell me about enterprise pricing"
+                "What is the pricing for an enterprise deal?",
+                "What is enterprise deal pricing?",
+                "How much does an enterprise deal cost?",
+                "Tell me about enterprise pricing"
         };
 
         Map<String, Object> metadata = new HashMap<>();

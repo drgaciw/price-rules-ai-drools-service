@@ -18,7 +18,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Implementation of semantic caching using Redis VectorStore.
- * Uses embedding-based similarity search to find cached responses for similar queries.
+ * Uses embedding-based similarity search to find cached responses for similar
+ * queries.
  */
 @Slf4j
 @Service
@@ -27,7 +28,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SemanticCacheServiceImpl implements SemanticCacheService {
 
     private final VectorStore vectorStore;
-    private final EmbeddingService embeddingService;
 
     @Value("${spring.redis.vector-store.similarity-threshold:0.85}")
     private double similarityThreshold;
@@ -78,7 +78,7 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
 
             List<Document> similarDocuments = vectorStore.similaritySearch(searchRequest);
 
-            if (similarDocuments.isEmpty()) {
+            if (similarDocuments == null || similarDocuments.isEmpty()) {
                 log.debug("No similar documents found in cache for query: {}", query);
                 cacheMisses.incrementAndGet();
                 return Optional.empty();
@@ -210,7 +210,7 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
                     .similarityThreshold(0.0)
                     .build();
             List<Document> allDocs = vectorStore.similaritySearch(request);
-            return allDocs.size();
+            return allDocs != null ? allDocs.size() : 0;
         } catch (Exception e) {
             log.error("Error getting cache size", e);
             return 0;
@@ -231,24 +231,29 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
         // Common enterprise deal queries
         Map<String, String> commonQueries = Map.of(
                 "What is the pricing for an enterprise deal worth $500,000 with 3-year contract?",
-                "For an enterprise deal of $500,000 over 3 years, typical pricing includes volume discounts (15-20% for contracts above $100K), " +
-                "multi-year commitment discounts (5-10% for 3-year terms), and enterprise support premium. Final pricing would be approximately " +
-                "$425,000-$450,000 annually depending on specific terms and risk factors.",
+                "For an enterprise deal of $500,000 over 3 years, typical pricing includes volume discounts (15-20% for contracts above $100K), "
+                        +
+                        "multi-year commitment discounts (5-10% for 3-year terms), and enterprise support premium. Final pricing would be approximately "
+                        +
+                        "$425,000-$450,000 annually depending on specific terms and risk factors.",
 
                 "Calculate ARR for a customer with monthly subscription of $10,000",
                 "ARR (Annual Recurring Revenue) for a customer with $10,000 monthly subscription is $120,000 " +
-                "(calculated as $10,000 × 12 months). This represents the annualized value of recurring revenue.",
+                        "(calculated as $10,000 × 12 months). This represents the annualized value of recurring revenue.",
 
                 "What discount should we offer for a 5-year commitment?",
-                "For a 5-year commitment, standard industry practice suggests 12-15% discount. This longer commitment " +
-                "reduces customer acquisition costs and provides revenue stability. Actual discount may vary based on " +
-                "deal size, customer risk profile, and competitive factors.",
+                "For a 5-year commitment, standard industry practice suggests 12-15% discount. This longer commitment "
+                        +
+                        "reduces customer acquisition costs and provides revenue stability. Actual discount may vary based on "
+                        +
+                        "deal size, customer risk profile, and competitive factors.",
 
                 "How do we calculate Customer Lifetime Value?",
-                "Customer Lifetime Value (CLV) is calculated as: (Average Revenue Per Customer × Customer Lifespan) - " +
-                "Customer Acquisition Cost. For SaaS businesses, this typically uses the formula: CLV = (Monthly Recurring Revenue × " +
-                "Gross Margin %) / Monthly Churn Rate. This helps determine the long-term value of acquiring a customer."
-        );
+                "Customer Lifetime Value (CLV) is calculated as: (Average Revenue Per Customer × Customer Lifespan) - "
+                        +
+                        "Customer Acquisition Cost. For SaaS businesses, this typically uses the formula: CLV = (Monthly Recurring Revenue × "
+                        +
+                        "Gross Margin %) / Monthly Churn Rate. This helps determine the long-term value of acquiring a customer.");
 
         commonQueries.forEach(this::cacheResponse);
 
