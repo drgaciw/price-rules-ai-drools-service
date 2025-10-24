@@ -3,7 +3,7 @@ package com.example.pricerulesaidrools.testing;
 import com.example.pricerulesaidrools.model.FinancialMetrics;
 import com.example.pricerulesaidrools.model.PricingRequest;
 import com.example.pricerulesaidrools.model.PricingResult;
-import com.example.pricerulesaidrools.service.DroolsIntegrationService;
+import com.example.pricerulesaidrools.drools.service.DroolsIntegrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kie.api.runtime.KieSession;

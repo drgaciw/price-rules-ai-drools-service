@@ -41,13 +41,16 @@ public class Rule {
     private String content;
 
     @Column(name = "version", nullable = false)
+    @Builder.Default
     private Integer version = 1;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
     private RuleStatus status = RuleStatus.DRAFT;
 
     @Column(name = "priority")
+    @Builder.Default
     private Integer priority = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -63,9 +66,11 @@ public class Rule {
     private LocalDateTime updatedAt;
 
     @Column(name = "active")
+    @Builder.Default
     private boolean active = true;
 
     @Column(name = "ai_generated")
+    @Builder.Default
     private boolean aiGenerated = false;
 
     /**

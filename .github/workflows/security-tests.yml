@@ -1,0 +1,174 @@
+name: Security Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  schedule:
+    # Run security tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  security-tests:
+    name: Security Vulnerability Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Run Security Tests
+      run: |
+        mvn clean test -Dtest=WebSecurityTest
+
+    - name: Check for CVE-2024-38821 vulnerability patterns
+      run: |
+        echo "Checking for static resource bypass patterns..."
+
+        # Check that static resources are explicitly denied
+        if ! grep -q "requestMatchers(\"/static/\*\*\").denyAll()" src/main/java/com/example/pricerulesaidrools/security/config/*.java; then
+          echo "WARNING: Static resources may not be properly secured"
+          exit 1
+        fi
+
+        if ! grep -q "requestMatchers(\"/resources/\*\*\").denyAll()" src/main/java/com/example/pricerulesaidrools/security/config/*.java; then
+          echo "WARNING: Resources path may not be properly secured"
+          exit 1
+        fi
+
+        echo "Static resource security checks passed"
+
+    - name: OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'price-rules-ai-drools'
+        path: '.'
+        format: 'HTML'
+        args: >
+          --enableRetired
+          --enableExperimental
+
+    - name: Upload Dependency Check results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dependency-check-report
+        path: reports/
+
+    - name: Run SpotBugs Security Analysis
+      run: |
+        mvn com.github.spotbugs:spotbugs-maven-plugin:4.7.3.0:check
+
+    - name: SonarQube Security Scan
+      if: github.event_name == 'push'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        if [ -n "$SONAR_TOKEN" ]; then
+          mvn sonar:sonar \
+            -Dsonar.projectKey=price-rules-ai-drools \
+            -Dsonar.organization=${{ github.repository_owner }} \
+            -Dsonar.host.url=https://sonarcloud.io
+        else
+          echo "Skipping SonarQube scan - SONAR_TOKEN not configured"
+        fi
+
+    - name: Test Report
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Security Test Results
+        path: target/surefire-reports/*.xml
+        reporter: java-junit
+
+  static-analysis:
+    name: Static Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run Semgrep Security Scan
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >
+          p/security-audit
+          p/owasp-top-ten
+          p/jwt
+
+    - name: Upload Semgrep results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: java
+        queries: +security-and-quality
+
+    - name: Build project
+      run: |
+        mvn clean compile -DskipTests
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+
+  regression-tests:
+    name: Security Regression Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Run CVE-2024-38821 Regression Tests
+      run: |
+        echo "Running targeted tests for CVE-2024-38821 prevention..."
+        mvn test -Dtest=WebSecurityTest#testStaticResourcesAreDenied
+        mvn test -Dtest=WebSecurityTest#testPathTraversalBlocked
+        mvn test -Dtest=WebSecurityTest#testFileExtensionsBlocked
+
+    - name: Verify Security Headers
+      run: |
+        mvn test -Dtest=WebSecurityTest#testSecurityHeaders
+
+    - name: Test Authentication & Authorization
+      run: |
+        mvn test -Dtest=WebSecurityTest#testApiEndpointsRequireAuth
+        mvn test -Dtest=WebSecurityTest#testActuatorRequiresAdminRole

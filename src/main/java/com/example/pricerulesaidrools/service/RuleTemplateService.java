@@ -1,8 +1,11 @@
 package com.example.pricerulesaidrools.service;
 
+import com.example.pricerulesaidrools.drools.service.DroolsIntegrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.drools.template.ObjectDataCompiler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -19,10 +22,10 @@ import java.util.Map;
  * This service handles the dynamic creation of pricing rules based on predefined templates.
  */
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class RuleTemplateService {
 
+    private static final Logger log = LoggerFactory.getLogger(RuleTemplateService.class);
     private final DroolsIntegrationService droolsIntegrationService;
     
     /**

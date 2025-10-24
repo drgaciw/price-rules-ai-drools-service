@@ -3,6 +3,34 @@ spring:
     name: price-rules-ai-drools
   profiles:
     active: dev
+  ai:
+    routing:
+      strategies:
+        - name: billing-review
+          condition: "deal.type == 'ENTERPRISE' && deal.value > 100000"
+          description: "Route enterprise deals above $100,000 to billing review"
+          priority: 10
+          enabled: true
+          minConfidence: 0.7
+        - name: technical-review
+          condition: "deal.complexity == 'HIGH'"
+          description: "Route high-complexity deals to technical review"
+          priority: 8
+          enabled: true
+          minConfidence: 0.6
+        - name: risk-review
+          condition: "customer.riskScore > 70"
+          description: "Route high-risk customers to risk review"
+          priority: 9
+          enabled: true
+          minConfidence: 0.7
+      fallback-route: general-review
+      confidence-threshold: 0.7
+      enable-detailed-logging: false
+      enable-caching: true
+      cache-ttl-seconds: 300
+      max-cache-size: 1000
+      enable-metrics: true
   jpa:
     hibernate:
       ddl-auto: validate
@@ -27,6 +55,14 @@ spring:
     database: 0
     timeout: 60000
     connect-timeout: 10000
+    vector-store:
+      enabled: true
+      similarity-threshold: 0.85
+      max-cache-size: 10000
+      ttl: 3600
+      embedding-model: text-embedding-ada-002
+      index-name: semantic-cache-index
+      prefix: semantic:cache:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml
@@ -55,6 +91,16 @@ drools:
   default-rule-path: classpath:rules/
   enable-caching: true
   max-rule-size: 1048576 # 1MB
+  max-cache-size: 100
+  
+financial-metrics:
+  default-churn-rate: 0.03 # 3% monthly churn rate
+  default-customer-lifespan: 36 # 3 years average customer lifespan in months
+  
+pricing:
+  default-currency: USD
+  risk-adjustment-factor: 0.1 # 10% adjustment for high-risk customers
+  volume-discount-threshold: 1000 # Minimum volume for discount eligibility
 
 management:
   endpoints:
@@ -100,12 +146,24 @@ logging:
     max-history: 7
 
 ai:
+  openai:
+    api-key: ${OPENAI_API_KEY:your-openai-api-key-here}
+    embedding-model: text-embedding-ada-002
+    embedding-dimensions: 1536
   sequential-thinking:
-    url: ${SEQUENTIAL_THINKING_URL:http://localhost:8081/api/sequential-thinking}
-    timeout: 10000 # milliseconds
+    apiUrl: ${SEQUENTIAL_THINKING_URL:http://localhost:8081/api/sequential-thinking}
+    apiKey: ${SEQUENTIAL_THINKING_API_KEY:your-api-key-here}
+    connectionTimeout: 10000 # milliseconds
+    readTimeout: 30000 # milliseconds
+    maxThoughts: 8
+    model: ${SEQUENTIAL_THINKING_MODEL:claude-3-opus-20240229}
   context7:
-    url: ${CONTEXT7_URL:http://localhost:8082/api/context7}
-    timeout: 5000 # milliseconds
+    apiUrl: ${CONTEXT7_URL:http://localhost:8082/api/context7}
+    apiKey: ${CONTEXT7_API_KEY:your-api-key-here}
+    connectionTimeout: 5000 # milliseconds
+    readTimeout: 15000 # milliseconds
+    defaultTokenLimit: 5000
+    defaultLibraryName: drools
   puppeteer:
     url: ${PUPPETEER_URL:http://localhost:8083/api/puppeteer}
     timeout: 30000 # milliseconds

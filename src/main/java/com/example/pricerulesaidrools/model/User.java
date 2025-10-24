@@ -43,6 +43,7 @@ public class User {
     private String lastName;
 
     @Column(name = "enabled")
+    @Builder.Default
     private boolean enabled = true;
 
     @CreationTimestamp

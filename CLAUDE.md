@@ -29,6 +29,12 @@ mvn test -Dtest=TestClassName
 
 # Run specific test method
 mvn test -Dtest=TestClassName#testMethodName
+
+# Run tests with coverage report (JaCoCo)
+mvn clean verify
+
+# View coverage report
+open target/site/jacoco/index.html
 ```
 
 ### Docker
@@ -67,9 +73,10 @@ The Price Rules AI Drools Service is a microservice that integrates the Drools r
    - `FinancialMetricsService`: Calculates and manages key financial metrics (ARR, TCV, ACV, CLV)
    - `PricingService`: Applies pricing strategies based on financial metrics
 
-3. **AI Rule Optimization**
-   - `AIEnhancedRuleLoader`: Pre-optimizes rules before execution
-   - Uses AI models to improve rule efficiency and performance
+3. **AI-Enhanced Services**
+   - `SequentialThinkingService`: Provides AI-driven analysis and decision making
+   - `Context7Service`: Integrates with Context7 for documentation enhancement
+   - `RuleCreationService`: AI-assisted rule generation and optimization
 
 4. **Data Model**
    - `FinancialMetrics`: Core entity for financial calculations
@@ -103,17 +110,27 @@ The application uses PostgreSQL with Liquibase for schema management:
 
 ## API Structure
 
-1. **Rule Management API**
+1. **Rule Management API** (`/api/rules`)
    - Create, read, update, delete rule sets and rules
    - Validate rules before deployment
+   - Rule conflict detection and resolution
 
-2. **Pricing Evaluation API**
+2. **Pricing Evaluation API** (`/api/pricing`)
    - Single and batch evaluation endpoints
-   - Financial metrics calculation
+   - Financial metrics calculation (ARR, TCV, ACV, CLV)
 
-3. **Monitoring API**
+3. **AI-Enhanced Rule Creation** (`/api/ai/rules`)
+   - AI-assisted rule generation and optimization
+   - Sequential thinking for rule analysis
+
+4. **Authentication API** (`/api/auth`)
+   - JWT-based login/signup endpoints
+   - User management
+
+5. **Monitoring API** (`/api/actuator`)
    - Rule execution metrics
    - Performance statistics
+   - Health checks and Prometheus metrics
 
 ## Configuration
 
@@ -148,3 +165,7 @@ Key configuration files:
    - Unit tests for business logic
    - Integration tests for rule execution
    - Use TestContainers for database tests
+
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md

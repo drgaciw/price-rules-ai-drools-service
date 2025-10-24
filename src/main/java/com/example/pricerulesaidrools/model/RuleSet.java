@@ -46,6 +46,7 @@ public class RuleSet {
     private LocalDateTime updatedAt;
 
     @Column(name = "active")
+    @Builder.Default
     private boolean active = true;
 
     @OneToMany(mappedBy = "ruleSet", cascade = CascadeType.ALL, orphanRemoval = true)

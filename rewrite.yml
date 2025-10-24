@@ -1,0 +1,65 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.example.SpringAIUpgrade
+displayName: Upgrade to Spring AI 1.0.0-M6
+description: Upgrades Spring AI dependencies to version 1.0.0-M6 and applies necessary API migrations
+recipeList:
+  # Upgrade Spring AI dependencies
+  - org.openrewrite.java.dependencies.UpgradeDependencyVersion:
+      groupId: org.springframework.ai
+      artifactId: spring-ai-core
+      newVersion: 1.0.0-M6
+      overrideManagedVersion: true
+
+  - org.openrewrite.java.dependencies.UpgradeDependencyVersion:
+      groupId: org.springframework.ai
+      artifactId: spring-ai-openai
+      newVersion: 1.0.0-M6
+      overrideManagedVersion: true
+
+  - org.openrewrite.java.dependencies.UpgradeDependencyVersion:
+      groupId: org.springframework.ai
+      artifactId: spring-ai-vertex-ai-gemini
+      newVersion: 1.0.0-M6
+      overrideManagedVersion: true
+
+  # Add Spring AI BOM for dependency management
+  - org.openrewrite.maven.AddManagedDependency:
+      groupId: org.springframework.ai
+      artifactId: spring-ai-bom
+      version: 1.0.0-M6
+      type: pom
+      scope: import
+
+  # Remove deprecated or renamed dependencies if they exist
+  - org.openrewrite.maven.RemoveDependency:
+      groupId: org.springframework.experimental
+      artifactId: spring-ai
+
+  # Update imports if Spring AI packages have changed
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: org.springframework.experimental.ai
+      newPackageName: org.springframework.ai
+      recursive: true
+
+  # Common Spring Boot best practices
+  - org.openrewrite.java.spring.boot3.UpgradeSpringBoot_3_4
+
+  # Java 21 enhancements
+  - org.openrewrite.java.migrate.UpgradeToJava21
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.example.SpringAICompatibilityCheck
+displayName: Spring AI Compatibility Verification
+description: Verifies compatibility between Spring AI 1.0.1 and other dependencies
+recipeList:
+  # Check for dependency version conflicts
+  - org.openrewrite.maven.search.DependencyInsight:
+      groupIdPattern: org.springframework.*
+      artifactIdPattern: spring-ai-*
+
+  # Verify Spring Boot compatibility
+  - org.openrewrite.maven.search.DependencyInsight:
+      groupIdPattern: org.springframework.boot
+      artifactIdPattern: spring-boot-starter-parent

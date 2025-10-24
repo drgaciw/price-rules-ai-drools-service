@@ -36,7 +36,7 @@ public class JwtUtils {
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .signWith(getSigningKey())
                 .compact();
     }
 
@@ -79,7 +79,6 @@ public class JwtUtils {
 
         return false;
     }
-
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = getUsernameFromJwtToken(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);

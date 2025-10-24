@@ -19,6 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * @deprecated Use {@link WebSecurityConfig} instead.
+ * This class is maintained for backward compatibility only.
+ * WebSecurityConfig provides enhanced security features including CVE-2024-38821 mitigation.
+ */
+@Deprecated(since = "1.0", forRemoval = true)
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity

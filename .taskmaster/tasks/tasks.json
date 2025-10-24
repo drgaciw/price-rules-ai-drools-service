@@ -1,0 +1,245 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Implement Spring AI Routing Workflows",
+        "description": "Implement Spring AI Routing to direct deal evaluations to specialized prompts (billing, technical, risk review)",
+        "details": "Create AIRoutingService interface and implementation with routing strategies for billing, technical, and risk review scenarios. Implement automatic prompt selection based on deal characteristics with logging and fallback mechanisms.\n\nFiles to create:\n- src/main/java/com/example/pricerulesaidrools/ai/service/AIRoutingService.java\n- src/main/java/com/example/pricerulesaidrools/ai/service/AIRoutingServiceImpl.java\n- src/main/java/com/example/pricerulesaidrools/ai/config/RoutingConfiguration.java\n- src/main/java/com/example/pricerulesaidrools/ai/dto/RoutingDecision.java\n- src/test/java/com/example/pricerulesaidrools/ai/service/AIRoutingServiceTest.java\n\nAcceptance Criteria:\n- Routing configuration for billing, technical, and risk review\n- Automatic prompt selection based on deal type, size, complexity\n- All routing decisions logged with confidence scores\n- Fallback mechanism for low-confidence routing (<70%)\n- Unit tests with 80%+ coverage",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Implement Spring AI Chain Workflows",
+        "description": "Implement sequential prompt chaining for multi-step pricing analysis (base price → discount justification → compliance check)",
+        "details": "Create AIChainExecutor service for sequential prompt execution with context passing between steps.\n\nFiles to create:\n- src/main/java/com/example/pricerulesaidrools/ai/service/AIChainExecutor.java\n- src/main/java/com/example/pricerulesaidrools/ai/service/AIChainExecutorImpl.java\n- src/main/java/com/example/pricerulesaidrools/ai/model/ChainContext.java\n- src/main/java/com/example/pricerulesaidrools/ai/model/ChainStep.java\n- src/test/java/com/example/pricerulesaidrools/ai/service/AIChainExecutorTest.java\n\nAcceptance Criteria:\n- Chain workflow: base price → discount justification → compliance check\n- Context passing between chain steps\n- Intermediate results stored for debugging\n- Chain short-circuit on validation failures\n- Integration tests with complete chain execution",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          1
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Integrate BeanOutputParser for Structured AI Outputs",
+        "description": "Use Spring AI BeanOutputParser to convert LLM responses into typed DTOs consumable by Drools",
+        "details": "Configure BeanOutputParser for pricing DTOs with type-safe conversion and validation.\n\nFiles to create:\n- src/main/java/com/example/pricerulesaidrools/ai/parser/StructuredOutputParser.java\n- src/main/java/com/example/pricerulesaidrools/ai/parser/StructuredOutputParserImpl.java\n- src/main/java/com/example/pricerulesaidrools/ai/dto/AIStructuredResponse.java\n- src/test/java/com/example/pricerulesaidrools/ai/parser/StructuredOutputParserTest.java\n\nAcceptance Criteria:\n- BeanOutputParser configured for pricing response DTOs\n- Type-safe conversion from LLM JSON to Java objects\n- Validation for parsed objects\n- Error handling for malformed AI responses\n- Unit tests with various response formats",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 4,
+        "title": "Extend DTOs with AI-Enriched Context Fields",
+        "description": "Add AI-specific fields to existing DTOs while maintaining backward compatibility",
+        "details": "Extend pricing DTOs with ChurnIndicator, RevenueOpportunity, RiskScore fields.\n\nFiles to create:\n- src/main/java/com/example/pricerulesaidrools/dto/AIEnrichedPricingRequest.java\n- src/main/java/com/example/pricerulesaidrools/dto/ChurnIndicator.java\n- src/main/java/com/example/pricerulesaidrools/dto/RevenueOpportunity.java\n- src/main/java/com/example/pricerulesaidrools/dto/RiskScore.java\n- src/main/java/com/example/pricerulesaidrools/dto/ConfidenceScore.java\n\nAcceptance Criteria:\n- DTOs enhanced with AI fields: churnIndicator, revenueOpportunity, riskScore\n- Backward compatibility with non-AI flows\n- JavaDoc documentation for all AI-specific fields\n- Builder patterns for easy DTO construction\n- Migration tests for existing code",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          3
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 5,
+        "title": "Create Drools Validation Rules for AI Responses",
+        "description": "Add Drools rules to validate AI-enriched inputs before processing",
+        "details": "Implement validation rules for required fields, numeric bounds, and completeness.\n\nFiles to create:\n- src/main/resources/rules/ai-validation-rules.drl\n- src/main/java/com/example/pricerulesaidrools/drools/validator/AIResponseValidator.java\n- src/test/java/com/example/pricerulesaidrools/drools/validator/AIResponseValidatorTest.java\n\nAcceptance Criteria:\n- Validation rules for required AI fields\n- Bounds checking for numeric predictions (0-100 for probabilities)\n- Rejection rules for incomplete AI responses\n- Logging of validation failures with details\n- Integration tests with various AI response scenarios",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          4
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Configure ChatOptions with Top-K and Top-P Sampling",
+        "description": "Configure sampling parameters for deterministic vs exploratory AI responses",
+        "details": "Create ChatOptions profiles and per-scenario configuration.\n\nFiles: ChatOptionsConfiguration.java, ChatOptionsProvider.java, application-ai.yml, tests\n\nAcceptance Criteria:\n- ChatOptions profiles: deterministic (temp=0.1) and exploratory (temp=0.7)\n- Per-scenario config: volume discount, churn mitigation, upsell\n- Configuration externalized to application.yml",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Create Versioned Prompt Template Library",
+        "description": "Build and version prompt templates with ownership tracking",
+        "details": "Templates for volume discount, churn mitigation, commitment adjustments, upsell.\n\nFiles: src/main/resources/prompts/, PromptTemplateManager.java, PromptVersion.java\n\nAcceptance Criteria:\n- Version control integration\n- Owner assignment per template\n- Template testing framework\n- A/B testing support",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          6
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Build Regression Tests for LLM Output Validation",
+        "description": "Automated testing ensuring LLM outputs stay within expected variance",
+        "details": "Tests for critical pricing scenarios with variance thresholds.\n\nFiles: LLMRegressionTest.java, VarianceValidator.java, test-scenarios.json, variance-thresholds.yml\n\nAcceptance Criteria:\n- Tests for critical scenarios\n- Variance thresholds configurable per scenario\n- Test failure alerts to template owners\n- CI/CD integration",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          7
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Implement Self-Consistency Pattern",
+        "description": "Execute multiple AI inferences with majority voting for sensitive classifications",
+        "details": "Multi-inference (3-5 runs) with temperature variation and voting.\n\nFiles: SelfConsistencyService.java, SelfConsistencyServiceImpl.java, SelfConsistencyResult.java, MajorityVoting.java\n\nAcceptance Criteria:\n- 3-5 inferences with temperature variation\n- Majority voting algorithm\n- Confidence score from vote distribution\n- Applied to: churn risk, upsell eligibility, contract risk\n- Parallel execution optimization",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          3
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Add Auditability Logging for Self-Consistency",
+        "description": "Log all intermediate results for audit and retrieval",
+        "details": "Audit logging for inference results, votes, and decisions.\n\nFiles: SelfConsistencyAuditLogger.java, SelfConsistencyAuditLog.java, SelfConsistencyAuditRepository.java, SelfConsistencyAuditController.java\n\nAcceptance Criteria:\n- All individual inference results logged\n- Vote distribution recorded\n- Retrieval API for audit queries\n- Retention policy configuration",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          9
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Provision Redis VectorStore for Semantic Caching",
+        "description": "Setup Redis-backed vector store for AI response caching",
+        "details": "Configure Redis VectorStore with similarity threshold and embedding.\n\nFiles: SemanticCacheService.java, SemanticCacheServiceImpl.java, VectorStoreConfiguration.java, EmbeddingService.java\n\nAcceptance Criteria:\n- Redis VectorStore configured (similarity threshold 0.85)\n- Cache for common deal archetypes\n- Embedding generation for queries\n- Integration tests with cache hits/misses",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Implement Cache Metrics and Monitoring",
+        "description": "Add comprehensive metrics for cache performance",
+        "details": "Hit/miss rates, size monitoring, alerts, Prometheus integration.\n\nFiles: CacheMetricsCollector.java, CacheHealthIndicator.java, grafana dashboards\n\nAcceptance Criteria:\n- Hit/miss rate metrics\n- Cache size monitoring\n- Alert thresholds for low hit rate (<50%)\n- Grafana dashboard",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          11
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 13,
+        "title": "Configure Data Retention and Privacy Policies",
+        "description": "Implement GDPR-compliant data retention and PII handling",
+        "details": "TTL configuration, PII scrubbing, GDPR deletion API.\n\nFiles: PIIScrubber.java, CacheRetentionPolicy.java, CacheManagementController.java, PRIVACY_POLICY.md\n\nAcceptance Criteria:\n- Configurable TTL for cached responses\n- PII scrubbing before caching\n- GDPR-compliant deletion API\n- Audit log for cache operations",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          11
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 14,
+        "title": "Fix CVE-2024-38821 WebFlux Static Resource Bypass",
+        "description": "Remediate static resource bypass vulnerability in WebFlux",
+        "details": "Harden WebFlux configuration and add security tests.\n\nFiles: WebFluxSecurityConfig.java, WebFluxSecurityTest.java\n\nAcceptance Criteria:\n- WebFlux configuration hardened\n- Security tests verify no bypass\n- Documentation of fix applied\n- Regression tests in CI",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 15,
+        "title": "Enforce WebDataBinder Field Whitelisting",
+        "description": "Prevent mass assignment vulnerabilities via field whitelisting",
+        "details": "Explicit field whitelisting for all controllers.\n\nFiles: WebDataBinderConfig.java, all controllers, WebDataBinderSecurityTest.java\n\nAcceptance Criteria:\n- setAllowedFields enforced on all controllers\n- Rejection of non-whitelisted fields\n- Unit tests verify whitelist enforcement\n- Documentation of whitelisted fields",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 16,
+        "title": "Setup Automated Dependency Scanning Pipeline",
+        "description": "Continuous vulnerability scanning for dependencies",
+        "details": "Weekly scans for Spring AI, Redis, Drools dependencies.\n\nFiles: .github/workflows/dependency-scan.yml, pom.xml (OWASP plugin), scan reports\n\nAcceptance Criteria:\n- Weekly automated scans\n- Critical vulnerability alerts\n- Remediation tracking in GitHub Issues\n- CI/CD integration\n- Security dashboard",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Execute OpenRewrite Recipe for Spring AI Upgrade",
+        "description": "Automated upgrade to Spring AI 1.0.1 using OpenRewrite",
+        "details": "OpenRewrite recipe for Spring AI upgrade with validation.\n\nFiles: rewrite.yml, UPGRADE_NOTES.md\n\nAcceptance Criteria:\n- OpenRewrite recipe executed successfully\n- All deviations documented\n- Post-upgrade validation tests passing\n- Rollback plan documented",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Enhance CI Pipeline with AI Workflow Tests",
+        "description": "Add comprehensive AI workflow testing to CI/CD",
+        "details": "Integration tests, performance tests in CI pipeline.\n\nFiles: .github/workflows/ai-workflow-tests.yml, AIWorkflowIntegrationTest.java, AIPerformanceTest.java\n\nAcceptance Criteria:\n- Semantic cache integration tests in CI\n- AI workflow end-to-end tests\n- Performance regression tests\n- Test reports published to CI dashboard",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2,
+          11
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Add Distributed Tracing and Observability Hooks",
+        "description": "Complete observability for AI-augmented workflows",
+        "details": "Distributed tracing, structured logging, Prometheus metrics.\n\nFiles: AITracingInterceptor.java, AIMetricsCollector.java, AI workflow dashboards, application-observability.yml\n\nAcceptance Criteria:\n- Trace context propagation through AI workflows\n- Structured logs for: routing, chain execution, cache hits\n- Prometheus metrics integration\n- Grafana dashboards deployed\n- Alert rules for degraded performance",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          1,
+          2
+        ],
+        "priority": "high",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-10-20T23:06:39.105Z",
+      "description": "Default tasks context",
+      "updated": "2025-10-21T00:25:45.808Z"
+    }
+  }
+}

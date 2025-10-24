@@ -18,14 +18,14 @@
     
     <properties>
         <java.version>21</java.version>
-        <drools.version>8.47.0.Final</drools.version>
+        <drools.version>8.44.0.Final</drools.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
-        <spring-ai.version>0.1.0</spring-ai.version>
-        <lombok.version>1.18.28</lombok.version>
+        <spring-ai.version>1.0.0-M6</spring-ai.version>
+        <lombok.version>1.18.30</lombok.version>
         <postgresql.version>42.7.1</postgresql.version>
         <redis.version>4.0.0</redis.version>
         <liquibase.version>4.26.0</liquibase.version>
-        <jjwt.version>0.12.5</jjwt.version>
+        <jjwt.version>0.11.5</jjwt.version>
         <springdoc.version>2.3.0</springdoc.version>
         <testcontainers.version>1.19.3</testcontainers.version>
     </properties>
@@ -66,16 +66,27 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter</artifactId>
         </dependency>
+        <!-- Note: Spring Cloud Sleuth is no longer supported in newer Spring versions -->
+        <!-- Use Micrometer Tracing instead for observability -->
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-sleuth</artifactId>
-            <version>3.1.9</version> <!-- Using older version as this is the latest available -->
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing</artifactId>
         </dependency>
         
         <!-- Spring AI -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-core</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-redis-store</artifactId>
             <version>${spring-ai.version}</version>
         </dependency>
         
@@ -101,9 +112,14 @@
             <version>${drools.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.drools</groupId>
+            <artifactId>drools-templates</artifactId>
+            <version>${drools.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.kie</groupId>
             <artifactId>kie-spring</artifactId>
-            <version>${drools.version}</version>
+            <version>7.74.1.Final</version>
         </dependency>
         
         <!-- Database -->
@@ -192,7 +208,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -202,8 +218,26 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <repositories>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
     
     <build>
         <plugins>
@@ -222,9 +256,17 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <source>21</source>
+                    <target>21</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -250,6 +292,30 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>5.21.0</version>
+                <configuration>
+                    <activeRecipes>
+                        <recipe>com.example.SpringAIUpgrade</recipe>
+                    </activeRecipes>
+                    <configLocation>${project.basedir}/rewrite.yml</configLocation>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-spring</artifactId>
+                        <version>5.22.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-migrate-java</artifactId>
+                        <version>2.29.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
         </plugins>
     </build>
+
 </project>

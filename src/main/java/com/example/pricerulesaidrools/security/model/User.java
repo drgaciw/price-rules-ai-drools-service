@@ -42,12 +42,14 @@ public class User implements UserDetails {
     
     private String lastName;
     
+    @Builder.Default
     private boolean enabled = true;
 
     @ElementCollection(targetClass = Role.class, fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "role")
+    @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
     @CreationTimestamp

@@ -10,6 +10,7 @@ import com.example.pricerulesaidrools.repository.FinancialMetricsSnapshotReposit
 import com.example.pricerulesaidrools.repository.QuoteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,8 +32,11 @@ public class FinancialMetricsCalculator {
     private final QuoteRepository quoteRepository;
     private final FinancialMetricsSnapshotRepository snapshotRepository;
     
-    private static final BigDecimal DEFAULT_AVERAGE_CHURN_RATE = new BigDecimal("0.03"); // 3% monthly churn
-    private static final int DEFAULT_CUSTOMER_LIFESPAN = 36; // 3 years average customer lifespan
+    @Value("${financial-metrics.default-churn-rate:0.03}")
+    private BigDecimal defaultChurnRate;
+    
+    @Value("${financial-metrics.default-customer-lifespan:36}")
+    private int defaultCustomerLifespan;
     
     /**
      * Calculate financial metrics for a quote
@@ -122,7 +126,7 @@ public class FinancialMetricsCalculator {
     public BigDecimal calculateCLV(Quote quote) {
         BigDecimal arr = calculateARR(quote);
         int expectedDuration = quote.getExpectedDuration() != null ? 
-                quote.getExpectedDuration() : DEFAULT_CUSTOMER_LIFESPAN;
+                quote.getExpectedDuration() : defaultCustomerLifespan;
         
         BigDecimal churnRate = getChurnRate(quote.getCustomerId());
         BigDecimal retentionRate = BigDecimal.ONE.subtract(churnRate);
@@ -239,7 +243,7 @@ public class FinancialMetricsCalculator {
             return customerOpt.get().getChurnRiskScore();
         }
         
-        return DEFAULT_AVERAGE_CHURN_RATE;
+        return defaultChurnRate;
     }
     
     /**

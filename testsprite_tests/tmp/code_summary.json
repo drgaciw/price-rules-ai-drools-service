@@ -1,0 +1,188 @@
+{
+  "projectName": "price-rules-ai-drools",
+  "description": "A microservice that integrates with the Drools rule engine to provide dynamic pricing rule evaluation capabilities with AI-enhanced features",
+  "techStack": {
+    "language": "Java 21",
+    "framework": "Spring Boot 3.4.5",
+    "buildTool": "Maven",
+    "database": "PostgreSQL",
+    "cache": "Redis",
+    "rulesEngine": "Drools 8.44.0.Final",
+    "security": "JWT with Spring Security",
+    "monitoring": "Micrometer + Prometheus",
+    "documentation": "SpringDoc OpenAPI",
+    "testing": "JUnit, TestContainers, H2"
+  },
+  "architecture": {
+    "type": "Microservice",
+    "pattern": "Layered Architecture",
+    "layers": [
+      "Controller Layer (REST APIs)",
+      "Service Layer (Business Logic)",
+      "Repository Layer (Data Access)",
+      "Security Layer (Authentication/Authorization)",
+      "AI Integration Layer (Sequential Thinking, Context7)"
+    ]
+  },
+  "features": [
+    {
+      "name": "Rule Engine Integration",
+      "description": "Drools rule engine for dynamic pricing rule evaluation",
+      "components": [
+        "DroolsIntegrationService",
+        "RuleController",
+        "RuleSetRepository",
+        "RuleRepository"
+      ]
+    },
+    {
+      "name": "Financial Metrics Processing",
+      "description": "Calculate and manage ARR, TCV, ACV, CLV metrics",
+      "components": [
+        "FinancialMetricsService",
+        "FinancialMetricsCalculator",
+        "MetricsHistoryService",
+        "FinancialMetricsController"
+      ]
+    },
+    {
+      "name": "Pricing Strategies",
+      "description": "Multiple pricing strategies (volume, value-based, risk-adjusted)",
+      "components": [
+        "PricingService",
+        "PricingStrategyFactory",
+        "VolumePricingStrategy",
+        "ValuePricingStrategy",
+        "RiskAdjustedPricingStrategy"
+      ]
+    },
+    {
+      "name": "AI-Enhanced Rule Creation",
+      "description": "AI-assisted rule generation and optimization",
+      "components": [
+        "RuleCreationService",
+        "SequentialThinkingService",
+        "Context7Service",
+        "AIRuleController"
+      ]
+    },
+    {
+      "name": "Security & Authentication",
+      "description": "JWT-based authentication with role-based access control",
+      "components": [
+        "JwtUtils",
+        "JwtAuthenticationFilter",
+        "SecurityConfig",
+        "AuthController",
+        "UserDetailsServiceImpl"
+      ]
+    },
+    {
+      "name": "Rule Testing & Validation",
+      "description": "Comprehensive rule testing, conflict detection, and templates",
+      "components": [
+        "RuleTestRunner",
+        "RuleConflictService",
+        "RuleTemplateService",
+        "RuleTestController"
+      ]
+    },
+    {
+      "name": "Audit & History Tracking",
+      "description": "Complete audit trail and execution history",
+      "components": [
+        "RuleAuditLogRepository",
+        "RuleExecutionHistoryRepository",
+        "RuleCreationRecordRepository",
+        "MetricsSnapshotScheduler"
+      ]
+    }
+  ],
+  "dependencies": {
+    "core": [
+      "spring-boot-starter-web",
+      "spring-boot-starter-data-jpa",
+      "spring-boot-starter-security",
+      "spring-boot-starter-validation",
+      "spring-boot-starter-data-redis",
+      "spring-boot-starter-actuator",
+      "spring-boot-starter-cache"
+    ],
+    "cloud": [
+      "spring-cloud-starter",
+      "micrometer-tracing"
+    ],
+    "rulesEngine": [
+      "drools-core:8.44.0.Final",
+      "drools-compiler:8.44.0.Final",
+      "drools-mvel:8.44.0.Final",
+      "kie-api:8.44.0.Final",
+      "drools-templates:8.44.0.Final"
+    ],
+    "database": [
+      "postgresql:42.7.1",
+      "liquibase-core:4.26.0",
+      "jedis:4.0.0"
+    ],
+    "security": [
+      "jjwt-api:0.11.5",
+      "jjwt-impl:0.11.5",
+      "jjwt-jackson:0.11.5"
+    ],
+    "monitoring": [
+      "micrometer-registry-prometheus",
+      "springdoc-openapi-starter-webmvc-ui:2.3.0"
+    ],
+    "utilities": [
+      "lombok:1.18.30"
+    ],
+    "testing": [
+      "spring-boot-starter-test",
+      "spring-security-test",
+      "testcontainers:1.19.3",
+      "h2"
+    ]
+  },
+  "apiEndpoints": [
+    "/api/rules - Rule management CRUD operations",
+    "/api/pricing - Pricing evaluation and financial metrics",
+    "/api/ai/rules - AI-assisted rule creation",
+    "/api/auth - JWT authentication (login/signup)",
+    "/api/actuator - Monitoring and health checks",
+    "/api/templates - Rule template management",
+    "/api/conflicts - Rule conflict detection",
+    "/api/test - Rule testing endpoints"
+  ],
+  "dataModels": [
+    "RuleSet",
+    "Rule",
+    "FinancialMetrics",
+    "FinancialMetricsSnapshot",
+    "Customer",
+    "Quote",
+    "PricingRequest",
+    "PricingResult",
+    "RuleAuditLog",
+    "RuleExecutionHistory",
+    "RuleCreationRecord",
+    "User",
+    "Role"
+  ],
+  "configurationProfiles": [
+    "dev - Development environment (default)",
+    "test - Testing with H2 in-memory database",
+    "prod - Production with PostgreSQL and Redis"
+  ],
+  "improvements": {
+    "planned": [
+      "Spring AI integration (currently commented out)",
+      "Advanced AI workflows (Routing, Chain)",
+      "Structured AI outputs with BeanOutputParser",
+      "Semantic caching with Redis VectorStore",
+      "Self-consistency patterns for AI reliability",
+      "Enhanced security (CVE fixes, WebDataBinder hardening)",
+      "Observability hooks and distributed tracing",
+      "Prompt quality controls with ChatOptions"
+    ]
+  }
+}

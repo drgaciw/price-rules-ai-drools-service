@@ -95,7 +95,25 @@ public class FinancialMetricsServiceImpl implements FinancialMetricsService {
     @Transactional(readOnly = true)
     public List<FinancialMetrics> getHistoricalMetrics(String customerId, Duration period) {
         log.info("Getting historical metrics for customer ID: {}", customerId);
-        return calculator.getHistoricalMetrics(customerId, period);
+        return calculator.getHistoricalMetrics(customerId, period)
+                .stream()
+                .map(this::convertSnapshotToMetrics)
+                .collect(java.util.stream.Collectors.toList());
+    }
+    
+    private FinancialMetrics convertSnapshotToMetrics(com.example.pricerulesaidrools.model.FinancialMetricsSnapshot snapshot) {
+        return FinancialMetrics.builder()
+                .customerId(snapshot.getCustomerId())
+                .arr(snapshot.getArr())
+                .tcv(snapshot.getTcv())
+                .acv(snapshot.getAcv())
+                .clv(snapshot.getClv())
+                .churnRiskScore(snapshot.getChurnRiskScore())
+                .churnTrend("STABLE") // Default value since snapshot doesn't have this field
+                .growthRate(snapshot.getGrowthRate())
+                .createdAt(snapshot.getCreatedAt())
+                .updatedAt(snapshot.getCreatedAt())
+                .build();
     }
     
     @Override

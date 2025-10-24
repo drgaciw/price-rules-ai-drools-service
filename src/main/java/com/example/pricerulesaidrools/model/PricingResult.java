@@ -16,6 +16,7 @@ public class PricingResult {
     private double discount;
     private double finalPrice;
     private boolean calculationComplete;
+    @Builder.Default
     private double priceMultiplier = 1.0;
     private String discountDescription;
     private Double minimumCommitment;

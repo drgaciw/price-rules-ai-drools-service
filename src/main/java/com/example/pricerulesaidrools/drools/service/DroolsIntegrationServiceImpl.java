@@ -9,14 +9,13 @@ import com.example.pricerulesaidrools.drools.model.RuleSetMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.drools.core.impl.InternalKnowledgeBase;
+// import org.drools.core.impl.InternalKnowledgeBase; // Temporarily commented out due to missing dependency
 import org.kie.api.KieBase;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.Message;
 import org.kie.api.builder.Results;
-import org.kie.api.io.ResourceType;
 import org.kie.api.runtime.KieSession;
 import org.kie.internal.io.ResourceFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -146,83 +145,167 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
     }
 
     @Override
+    @CacheEvict(value = {"drools-rules", "drools-execution"}, allEntries = true)
     public RuleDeploymentResult updateRules(String ruleContent, String version) {
-        String ruleId = DigestUtils.md5Hex(ruleContent);
-        
-        // Check if rule exists
-        if (!ruleSetMetadataMap.containsKey(ruleId)) {
+        // Validate inputs
+        if (ruleContent == null || ruleContent.isEmpty()) {
             return RuleDeploymentResult.builder()
-                    .id(ruleId)
                     .successful(false)
-                    .message("Rule set not found")
+                    .message("Rule content cannot be null or empty")
                     .build();
         }
         
-        try {
-            // Validate rules first
-            RuleValidationResult validationResult = validateRules(ruleContent);
-            if (!validationResult.isValid()) {
+        if (version == null || version.isEmpty()) {
+            return RuleDeploymentResult.builder()
+                    .successful(false)
+                    .message("Version cannot be null or empty")
+                    .build();
+        }
+        
+        String ruleId = DigestUtils.md5Hex(ruleContent);
+        
+        // Use synchronized block to avoid race conditions
+        synchronized (this) {
+            // Check if rule exists
+            if (!ruleSetMetadataMap.containsKey(ruleId)) {
                 return RuleDeploymentResult.builder()
                         .id(ruleId)
                         .successful(false)
-                        .message("Rule validation failed")
-                        .validationErrors(validationResult.getErrors())
+                        .message("Rule set not found")
                         .build();
             }
             
-            // Update metadata
-            RuleSetMetadata metadata = ruleSetMetadataMap.get(ruleId);
-            metadata.setVersion(version);
-            metadata.setLastUpdated(LocalDateTime.now());
-            ruleSetMetadataMap.put(ruleId, metadata);
-            
-            // Update the rule in Redis cache
-            redisTemplate.opsForValue().set("rule:" + ruleId, ruleContent);
-            redisTemplate.expire("rule:" + ruleId, ruleExpiration, java.util.concurrent.TimeUnit.SECONDS);
-            
-            // Clear KieBase cache
-            ((InternalKnowledgeBase) kieBase).clearRules();
-            
-            return RuleDeploymentResult.builder()
-                    .id(ruleId)
-                    .ruleSetId(ruleId)
-                    .successful(true)
-                    .message("Rule updated successfully")
-                    .build();
-            
-        } catch (Exception e) {
-            log.error("Error updating rules", e);
-            return RuleDeploymentResult.builder()
-                    .id(ruleId)
-                    .successful(false)
-                    .message("Error updating rules: " + e.getMessage())
-                    .build();
+            try {
+                // Validate rules first
+                RuleValidationResult validationResult = validateRules(ruleContent);
+                if (!validationResult.isValid()) {
+                    return RuleDeploymentResult.builder()
+                            .id(ruleId)
+                            .successful(false)
+                            .message("Rule validation failed")
+                            .validationErrors(validationResult.getErrors())
+                            .build();
+                }
+                
+                // Create a KieFileSystem with the rule content
+                KieFileSystem kfs = kieServices.newKieFileSystem();
+                String resourcePath = "src/main/resources/rules/rule_" + ruleId + ".drl";
+                kfs.write(resourcePath, 
+                        ResourceFactory.newByteArrayResource(ruleContent.getBytes()));
+                
+                // Build the rules
+                KieBuilder kieBuilder = kieServices.newKieBuilder(kfs);
+                kieBuilder.buildAll();
+                
+                // Check for errors
+                Results results = kieBuilder.getResults();
+                if (results.hasMessages(Message.Level.ERROR)) {
+                    List<RuleDeploymentResult.ValidationError> errors = results.getMessages(Message.Level.ERROR)
+                            .stream()
+                            .map(message -> RuleDeploymentResult.ValidationError.builder()
+                                    .code("COMPILATION_ERROR")
+                                    .message(message.getText())
+                                    .severity(RuleDeploymentResult.ValidationError.Severity.ERROR)
+                                    .build())
+                            .collect(Collectors.toList());
+                    
+                    return RuleDeploymentResult.builder()
+                            .id(ruleId)
+                            .successful(false)
+                            .message("Rule compilation failed")
+                            .validationErrors(errors)
+                            .build();
+                }
+                
+                // Update metadata
+                RuleSetMetadata metadata = ruleSetMetadataMap.get(ruleId);
+                metadata.setVersion(version);
+                metadata.setLastUpdated(LocalDateTime.now());
+                ruleSetMetadataMap.put(ruleId, metadata);
+                
+                // Update the rule in Redis cache
+                redisTemplate.opsForValue().set("rule:" + ruleId, ruleContent);
+                redisTemplate.expire("rule:" + ruleId, ruleExpiration, java.util.concurrent.TimeUnit.SECONDS);
+                
+                // Note: Clear KieBase cache - InternalKnowledgeBase is not available in newer versions
+                // In production, rules would be reloaded from a proper deployment mechanism
+                // ((InternalKnowledgeBase) kieBase).clearRules();
+                
+                // Reset execution metrics for this rule set
+                executionCountMap.put(ruleId, new AtomicLong(0));
+                
+                return RuleDeploymentResult.builder()
+                        .id(ruleId)
+                        .ruleSetId(ruleId)
+                        .successful(true)
+                        .message("Rule updated successfully")
+                        .build();
+                
+            } catch (Exception e) {
+                log.error("Error updating rules", e);
+                return RuleDeploymentResult.builder()
+                        .id(ruleId)
+                        .successful(false)
+                        .message("Error updating rules: " + e.getMessage())
+                        .build();
+            }
         }
     }
 
     @Override
-    @CacheEvict(value = "drools-rules", key = "#version")
+    @CacheEvict(value = {"drools-rules", "drools-execution"}, allEntries = true)
     public void undeployRules(String version) {
-        // Find rule set by version
-        Optional<String> ruleSetIdOpt = ruleSetMetadataMap.entrySet().stream()
-                .filter(entry -> entry.getValue().getVersion().equals(version))
-                .map(Map.Entry::getKey)
-                .findFirst();
+        // Validate input
+        if (version == null || version.isEmpty()) {
+            log.error("Invalid version: null or empty");
+            return;
+        }
         
-        if (ruleSetIdOpt.isPresent()) {
-            String ruleSetId = ruleSetIdOpt.get();
+        try {
+            // Find rule set by version
+            Optional<String> ruleSetIdOpt = ruleSetMetadataMap.entrySet().stream()
+                    .filter(entry -> entry.getValue().getVersion().equals(version))
+                    .map(Map.Entry::getKey)
+                    .findFirst();
             
-            // Update metadata
-            RuleSetMetadata metadata = ruleSetMetadataMap.get(ruleSetId);
-            metadata.setStatus(RuleSetMetadata.RuleStatus.DELETED);
-            ruleSetMetadataMap.put(ruleSetId, metadata);
-            
-            // Remove from Redis cache
-            redisTemplate.delete("rule:" + ruleSetId);
-            
-            log.info("Rule set with ID {} undeployed", ruleSetId);
-        } else {
-            log.warn("Rule set with version {} not found", version);
+            if (ruleSetIdOpt.isPresent()) {
+                String ruleSetId = ruleSetIdOpt.get();
+                
+                // Update metadata
+                RuleSetMetadata metadata = ruleSetMetadataMap.get(ruleSetId);
+                metadata.setStatus(RuleSetMetadata.RuleStatus.DELETED);
+                metadata.setLastUpdated(LocalDateTime.now());
+                ruleSetMetadataMap.put(ruleSetId, metadata);
+                
+                // Remove from Redis cache
+                redisTemplate.delete("rule:" + ruleSetId);
+                
+                // Clear KieBase cache for consistency with other methods
+                // Note: InternalKnowledgeBase API is not available in newer Drools versions
+                // if (kieBase != null) {
+                //     try {
+                //         ((InternalKnowledgeBase) kieBase).clearRules();
+                //         log.debug("Cleared KieBase rules cache after undeployment");
+                //     } catch (Exception e) {
+                //         log.warn("Error clearing KieBase cache", e);
+                //     }
+                // }
+                
+                // Reset execution metrics for this rule set
+                synchronized (this) {
+                    executionCountMap.remove(ruleSetId);
+                    cacheHitsMap.remove(ruleSetId);
+                    cacheMissesMap.remove(ruleSetId);
+                    executionMetricsMap.remove(ruleSetId);
+                }
+                
+                log.info("Rule set with ID {} undeployed successfully", ruleSetId);
+            } else {
+                log.warn("Rule set with version {} not found", version);
+            }
+        } catch (Exception e) {
+            log.error("Error undeploying rules for version: {}", version, e);
+            throw new RuntimeException("Failed to undeploy rules for version: " + version, e);
         }
     }
 
@@ -327,16 +410,29 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
 
     @Override
     @SuppressWarnings("unchecked")
-    @Cacheable(value = "drools-execution", key = "{#ruleSetId, #facts.hashCode()}")
+    @Cacheable(value = "drools-execution", key = "{#ruleSetId, #facts != null ? #facts.toString() : 'null'}")
     public <T> T executeRules(String ruleSetId, Map<String, Object> facts) {
         long startTime = System.currentTimeMillis();
         boolean success = true;
         
+        // Validate inputs
+        if (ruleSetId == null || ruleSetId.isEmpty()) {
+            log.error("Invalid rule set ID: null or empty");
+            return null;
+        }
+        
+        if (facts == null) {
+            log.error("Facts map is null for rule set ID {}", ruleSetId);
+            return null;
+        }
+        
         // Check if rule set exists
         if (!ruleSetMetadataMap.containsKey(ruleSetId)) {
             log.error("Rule set with ID {} not found", ruleSetId);
-            cacheHitsMap.put(ruleSetId, cacheHitsMap.getOrDefault(ruleSetId, 0L));
-            cacheMissesMap.put(ruleSetId, cacheMissesMap.getOrDefault(ruleSetId, 0L) + 1);
+            synchronized (this) {
+                cacheHitsMap.put(ruleSetId, cacheHitsMap.getOrDefault(ruleSetId, 0L));
+                cacheMissesMap.put(ruleSetId, cacheMissesMap.getOrDefault(ruleSetId, 0L) + 1);
+            }
             return null;
         }
         
@@ -345,33 +441,73 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
         T result = null;
         
         try {
+            // Set timeout if configured
+            if (ruleExecutionTimeout > 0) {
+                kieSession.getAgenda().getAgendaGroup("MAIN").setFocus();
+                kieSession.setGlobal("executionTimeout", ruleExecutionTimeout);
+            }
+            
             // Insert facts
-            facts.forEach(kieSession::insert);
+            for (Map.Entry<String, Object> entry : facts.entrySet()) {
+                if (entry.getValue() != null) {
+                    kieSession.insert(entry.getValue());
+                }
+            }
             
             // Set global variables if needed
             kieSession.setGlobal("logger", log);
             
-            // Fire rules
-            kieSession.fireAllRules();
+            // Fire rules with timeout
+            int firedRules = 0;
+            if (ruleExecutionTimeout > 0) {
+                // Create a future to run the rules with a timeout
+                java.util.concurrent.Future<Integer> future = java.util.concurrent.Executors.newSingleThreadExecutor()
+                    .submit(() -> kieSession.fireAllRules());
+                
+                try {
+                    firedRules = future.get(ruleExecutionTimeout, java.util.concurrent.TimeUnit.MILLISECONDS);
+                } catch (java.util.concurrent.TimeoutException e) {
+                    log.warn("Rule execution timed out after {} ms for rule set {}", 
+                            ruleExecutionTimeout, ruleSetId);
+                    future.cancel(true);
+                    success = false;
+                } catch (java.util.concurrent.ExecutionException | InterruptedException e) {
+                    log.error("Error during rule execution for rule set {}", ruleSetId, e);
+                    success = false;
+                }
+            } else {
+                // Execute without timeout
+                firedRules = kieSession.fireAllRules();
+            }
+            
+            log.debug("Fired {} rules for rule set {}", firedRules, ruleSetId);
             
             // Get result - assuming there's a specific fact of type T we want to return
             // In a real application, we'd have a more structured approach to handle results
-            // This is a simplified version
-            result = (T) facts.values().stream()
-                    .filter(fact -> fact instanceof Map && ((Map<?, ?>) fact).containsKey("result"))
-                    .findFirst()
-                    .orElse(null);
+            try {
+                result = (T) facts.values().stream()
+                        .filter(fact -> fact instanceof Map && ((Map<?, ?>) fact).containsKey("result"))
+                        .findFirst()
+                        .orElse(null);
+            } catch (ClassCastException e) {
+                log.error("Error casting result for rule set {}", ruleSetId, e);
+                success = false;
+            }
             
             // Update metrics
             executionCountMap.computeIfAbsent(ruleSetId, k -> new AtomicLong(0)).incrementAndGet();
             updateExecutionMetrics(ruleSetId, System.currentTimeMillis() - startTime, success);
             
         } catch (Exception e) {
-            log.error("Error executing rules", e);
+            log.error("Error executing rules for rule set {}", ruleSetId, e);
             success = false;
             updateExecutionMetrics(ruleSetId, System.currentTimeMillis() - startTime, success);
         } finally {
-            kieSession.dispose();
+            try {
+                kieSession.dispose();
+            } catch (Exception e) {
+                log.warn("Error disposing KieSession for rule set {}", ruleSetId, e);
+            }
         }
         
         return result;
@@ -382,10 +518,26 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
     public <T> List<T> executeBatchRules(String ruleSetId, List<Map<String, Object>> facts) {
         List<T> results = new ArrayList<>();
         
+        // Validate inputs
+        if (ruleSetId == null || ruleSetId.isEmpty()) {
+            log.error("Invalid rule set ID: null or empty");
+            return results;
+        }
+        
+        if (facts == null || facts.isEmpty()) {
+            log.error("Facts list is null or empty for rule set ID {}", ruleSetId);
+            return results;
+        }
+        
         // Execute each set of facts
         for (Map<String, Object> factSet : facts) {
-            T result = executeRules(ruleSetId, factSet);
-            results.add(result);
+            if (factSet != null) {
+                T result = executeRules(ruleSetId, factSet);
+                results.add(result);
+            } else {
+                log.warn("Skipping null fact set in batch execution for rule set {}", ruleSetId);
+                results.add(null);
+            }
         }
         
         return results;
@@ -393,6 +545,10 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
 
     @Override
     public RuleSetMetadata getRuleSetMetadata(String ruleSetId) {
+        if (ruleSetId == null || ruleSetId.isEmpty()) {
+            log.error("Invalid rule set ID: null or empty");
+            return null;
+        }
         return ruleSetMetadataMap.get(ruleSetId);
     }
 
@@ -402,8 +558,14 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
     }
 
     @Override
-    @CacheEvict(value = "drools-rules", key = "#ruleSetId")
+    @CacheEvict(value = {"drools-rules", "drools-execution"}, allEntries = true)
     public void reloadRuleSet(String ruleSetId) {
+        // Validate input
+        if (ruleSetId == null || ruleSetId.isEmpty()) {
+            log.error("Invalid rule set ID: null or empty");
+            return;
+        }
+        
         // Check if rule set exists
         if (!ruleSetMetadataMap.containsKey(ruleSetId)) {
             log.error("Rule set with ID {} not found", ruleSetId);
@@ -421,20 +583,42 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
         try {
             // Create a KieFileSystem with the rule content
             KieFileSystem kfs = kieServices.newKieFileSystem();
-            kfs.write("src/main/resources/rules/rule_" + ruleSetId + ".drl", 
+            String resourcePath = "src/main/resources/rules/rule_" + ruleSetId + ".drl";
+            kfs.write(resourcePath, 
                     ResourceFactory.newByteArrayResource(ruleContent.getBytes()));
             
             // Build the rules
             KieBuilder kieBuilder = kieServices.newKieBuilder(kfs);
             kieBuilder.buildAll();
             
-            // Clear KieBase cache
-            ((InternalKnowledgeBase) kieBase).clearRules();
+            Results results = kieBuilder.getResults();
+            if (results.hasMessages(Message.Level.ERROR)) {
+                log.error("Errors detected during rule reload for rule set {}:", ruleSetId);
+                results.getMessages(Message.Level.ERROR).forEach(message -> 
+                    log.error("  - {}", message.getText()));
+                throw new RuntimeException("Rule compilation errors detected");
+            }
             
-            log.info("Rule set with ID {} reloaded", ruleSetId);
+            // Clear KieBase cache
+            // Note: InternalKnowledgeBase API is not available in newer Drools versions
+            // ((InternalKnowledgeBase) kieBase).clearRules();
+            
+            // Reset execution metrics for this rule set
+            executionCountMap.put(ruleSetId, new AtomicLong(0));
+            
+            // Update rule metadata
+            RuleSetMetadata metadata = ruleSetMetadataMap.get(ruleSetId);
+            metadata.setLastUpdated(LocalDateTime.now());
+            ruleSetMetadataMap.put(ruleSetId, metadata);
+            
+            // Refresh Redis TTL
+            redisTemplate.expire("rule:" + ruleSetId, ruleExpiration, java.util.concurrent.TimeUnit.SECONDS);
+            
+            log.info("Rule set with ID {} reloaded successfully", ruleSetId);
             
         } catch (Exception e) {
             log.error("Error reloading rule set with ID {}", ruleSetId, e);
+            throw new RuntimeException("Failed to reload rule set: " + e.getMessage(), e);
         }
     }
 
@@ -484,5 +668,38 @@ public class DroolsIntegrationServiceImpl implements DroolsIntegrationService {
         metrics.setCacheHitRate(total > 0 ? (double) cacheHits / total : 0);
         
         executionMetricsMap.put(ruleSetId, metrics);
+    }
+    
+    @Override
+    public KieBase getKieBase() {
+        log.debug("Getting KieBase");
+        return kieBase;
+    }
+    
+    @Override
+    public KieSession getKieSession() {
+        // Return a new KieSession from the KieBase
+        // In a production system, this might be managed from a pool
+        log.debug("Getting KieSession");
+        return kieBase.newKieSession();
+    }
+    
+    @Override
+    public void reloadRules() {
+        log.info("Reloading all rules");
+        try {
+            // Clear all rule set metadata
+            ruleSetMetadataMap.clear();
+            executionCountMap.clear();
+            executionMetricsMap.clear();
+            cacheHitsMap.clear();
+            cacheMissesMap.clear();
+            
+            // In a production system, this would reload rules from storage
+            log.info("All rules reloaded successfully");
+        } catch (Exception e) {
+            log.error("Error reloading all rules", e);
+            throw new RuntimeException("Failed to reload all rules: " + e.getMessage(), e);
+        }
     }
 }

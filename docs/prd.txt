@@ -1,0 +1,488 @@
+# Product Requirements Document: Spring AI & Rules Engine Modernization
+
+## Executive Summary
+
+### Product Vision
+Transform the price-rules-ai-drools-service into a modern, AI-orchestrated pricing platform that leverages Spring AI patterns, semantic caching, and self-consistency algorithms to deliver reliable, performant, and secure pricing decisions at scale.
+
+### Business Objectives
+1. Enable AI-augmented pricing workflows with 95% structured output success rate
+2. Achieve <200ms latency improvement through semantic caching
+3. Maintain zero critical security vulnerabilities
+4. Deliver comprehensive observability for AI-driven pricing decisions
+
+### Target Users
+- Pricing analysts evaluating complex deals
+- Sales teams requiring real-time pricing recommendations
+- Risk managers assessing deal compliance
+- System administrators monitoring AI workflow health
+
+## Problem Statement
+
+### Current Challenges
+1. **Limited AI Integration**: Spring AI dependency currently commented out due to compatibility issues
+2. **Manual Response Processing**: LLM outputs require manual parsing and validation
+3. **Performance Bottlenecks**: No caching layer for repeated AI queries
+4. **Security Vulnerabilities**: Known CVEs in WebFlux and WebDataBinder configurations
+5. **Inconsistent AI Outputs**: Lack of reliability patterns for critical decisions
+
+### Impact
+- Slow pricing decision cycles
+- High operational overhead for AI response handling
+- Poor user experience due to latency
+- Security risks in production
+- Unreliable AI predictions for high-value deals
+
+## Features & Requirements
+
+### Feature 1: AI-Orchestrated Rule Workflows
+
+**Description**: Implement Spring AI Routing and Chain workflows to intelligently direct pricing evaluations through specialized prompts.
+
+**User Stories**:
+- As a pricing analyst, I want deals automatically routed to specialized prompts (billing, technical, risk) based on deal characteristics
+- As a system, I need to chain multiple AI prompts sequentially to build comprehensive pricing recommendations
+- As an auditor, I want all routing decisions logged for compliance review
+
+**Acceptance Criteria**:
+- Routing configuration supports billing, technical, and risk review scenarios
+- Automatic prompt selection based on deal type, size, and complexity
+- All routing decisions logged with confidence scores
+- Fallback mechanism for low-confidence routing (<70%)
+- Chain workflows execute: base price → discount justification → compliance check
+- Intermediate chain results stored for debugging
+- Chain short-circuits on validation failures
+
+**Priority**: P0 (Critical)
+**Estimated Effort**: 5-7 days
+**Dependencies**: Spring AI 1.0.1+ integration
+
+### Feature 2: Structured AI Outputs for Drools
+
+**Description**: Use BeanOutputParser to convert LLM responses into typed Java objects that Drools can consume directly.
+
+**User Stories**:
+- As a developer, I want AI responses automatically parsed into Java DTOs
+- As a rules engine, I need validated AI outputs as Drools facts
+- As a QA engineer, I want comprehensive validation for malformed AI responses
+
+**Acceptance Criteria**:
+- BeanOutputParser configured for all pricing response DTOs
+- Type-safe conversion from LLM JSON to Java objects
+- Validation rules for: required fields, numeric bounds (0-100 for probabilities)
+- DTOs extended with AI fields: churnIndicator, revenueOpportunity, riskScore
+- Backward compatibility maintained for non-AI flows
+- Drools validation rules reject incomplete AI responses
+- All validation failures logged with details
+
+**Priority**: P0 (Critical)
+**Estimated Effort**: 4-6 days
+**Dependencies**: Feature 1 (Routing workflows)
+
+### Feature 3: Prompt Quality Controls
+
+**Description**: Implement temperature controls, versioned templates, and regression testing for consistent AI outputs.
+
+**User Stories**:
+- As a pricing manager, I want consistent AI responses for standard scenarios
+- As a template owner, I want version control for my prompt templates
+- As a QA engineer, I want automated tests ensuring AI output quality
+
+**Acceptance Criteria**:
+- ChatOptions profiles: deterministic (temp=0.1) and exploratory (temp=0.7)
+- Per-scenario configuration: volume discount, churn mitigation, upsell
+- Configuration externalized to application.yml
+- Versioned templates for: volume discount, churn mitigation, commitment adjustments, upsell
+- Template ownership tracking in metadata
+- Regression tests verify outputs within 5% variance
+- Test failures alert template owners automatically
+
+**Priority**: P1 (High)
+**Estimated Effort**: 4-5 days
+**Dependencies**: Feature 2 (Structured outputs)
+
+### Feature 4: Self-Consistency Pattern for Reliability
+
+**Description**: Execute multiple LLM inferences with majority voting for high-confidence predictions on sensitive classifications.
+
+**User Stories**:
+- As a risk analyst, I want high-confidence churn predictions through multi-inference voting
+- As an auditor, I need visibility into all inference results for review
+- As a developer, I want configurable inference counts per scenario
+
+**Acceptance Criteria**:
+- Multi-inference execution (3-5 runs) with temperature variation
+- Majority voting algorithm produces final classification
+- Confidence score calculated from vote distribution
+- Applied to: churn risk, upsell eligibility, contract risk
+- All individual inference results logged for audit
+- Vote distribution and confidence scores stored
+- Performance optimization via parallel execution
+
+**Priority**: P1 (High)
+**Estimated Effort**: 4-5 days
+**Dependencies**: Feature 2 (Structured outputs)
+
+### Feature 5: Semantic Caching with Redis VectorStore
+
+**Description**: Provision Redis-backed vector store for semantic similarity caching of AI responses.
+
+**User Stories**:
+- As a system, I want to cache semantically similar queries to reduce LLM API calls
+- As an operator, I need visibility into cache hit rates and performance
+- As a compliance officer, I want GDPR-compliant data retention policies
+
+**Acceptance Criteria**:
+- Redis VectorStore provisioned with similarity threshold 0.85
+- Cache for common deal archetypes and customer questions
+- Hit/miss rate metrics exposed via Prometheus
+- Cache size monitoring with alert threshold
+- Configurable TTL for cached responses (default: 1 hour)
+- PII scrubbing before caching
+- GDPR-compliant deletion API
+- Audit log for all cache operations
+
+**Priority**: P1 (High)
+**Estimated Effort**: 4-6 days
+**Dependencies**: None (can run parallel)
+
+### Feature 6: Security Hardening
+
+**Description**: Fix known CVEs and implement security best practices for WebFlux and WebDataBinder.
+
+**User Stories**:
+- As a security engineer, I want zero critical CVEs in production
+- As a developer, I want automated dependency scanning
+- As a compliance officer, I need proof of security controls
+
+**Acceptance Criteria**:
+- CVE-2024-38821 WebFlux static resource bypass fixed
+- Security tests verify no bypass possible
+- WebDataBinder setAllowedFields enforced on all controllers
+- Explicit field whitelisting documented per controller
+- Unit tests verify whitelist enforcement
+- Weekly automated dependency scans (OWASP)
+- Critical vulnerability alerts configured
+- Remediation tracking in GitHub Issues
+
+**Priority**: P0 (Critical)
+**Estimated Effort**: 2-3 days
+**Dependencies**: None (can run parallel)
+
+### Feature 7: DevOps Automation & Observability
+
+**Description**: Enhance CI/CD with AI workflow tests, distributed tracing, and automated upgrades.
+
+**User Stories**:
+- As a DevOps engineer, I want automated Spring AI upgrades
+- As a developer, I want comprehensive AI workflow tests in CI
+- As an SRE, I need distributed tracing for all AI operations
+
+**Acceptance Criteria**:
+- OpenRewrite recipe executed for Spring AI 1.0.1 upgrade
+- Post-upgrade validation tests passing
+- Rollback plan documented
+- AI workflow integration tests in CI
+- Semantic cache integration tests
+- Performance regression tests
+- Trace context propagation through AI workflows
+- Structured logs for: routing decisions, chain execution, cache hits
+- Prometheus metrics integration
+- Grafana dashboards for AI workflows
+
+**Priority**: P1 (High)
+**Estimated Effort**: 5-6 days
+**Dependencies**: Features 1-5 (needs implemented features to test)
+
+## Technical Architecture
+
+### System Components
+
+**AI Orchestration Layer**:
+- AIRoutingService: Routes requests to specialized prompts
+- AIChainExecutor: Executes sequential prompt chains
+- SelfConsistencyService: Multi-inference with majority voting
+
+**Structured Output Layer**:
+- StructuredOutputParser: Converts LLM JSON to Java DTOs
+- AIResponseValidator: Validates AI responses before Drools
+- BeanOutputParser: Spring AI component integration
+
+**Caching Layer**:
+- SemanticCacheService: Vector similarity-based caching
+- VectorStoreManager: Redis VectorStore management
+- EmbeddingService: Query embedding generation
+
+**Observability Layer**:
+- AITracingInterceptor: Distributed trace propagation
+- AIMetricsCollector: Prometheus metrics collection
+- AIWorkflowLogger: Structured logging
+
+### Data Models
+
+**AI-Enhanced DTOs**:
+```
+AIEnrichedPricingRequest extends PricingRequest {
+  - churnIndicator: ChurnIndicator
+  - revenueOpportunity: RevenueOpportunity
+  - riskScore: RiskScore
+  - confidenceScore: ConfidenceScore
+}
+
+ChurnIndicator {
+  - probability: Double (0-1)
+  - factors: List<String>
+  - calculatedAt: LocalDateTime
+}
+
+RevenueOpportunity {
+  - potentialValue: BigDecimal
+  - opportunityType: String
+  - confidenceLevel: Integer (0-100)
+}
+
+SelfConsistencyResult<T> {
+  - finalDecision: T
+  - confidenceScore: Double
+  - individualResults: List<T>
+  - voteDistribution: Map<T, Long>
+}
+```
+
+### Integration Points
+- **Drools Engine**: Consumes AI-enriched DTOs as facts
+- **PostgreSQL**: Stores audit logs, execution history
+- **Redis**: Vector store for semantic cache, session data
+- **Prometheus**: Metrics collection endpoint
+- **OpenAI API**: LLM inference calls
+
+## Non-Functional Requirements
+
+### Performance
+- AI query latency: <500ms for non-cached, <50ms for cached
+- Cache hit rate: >70% for common scenarios
+- System throughput: 1000 concurrent pricing evaluations
+- Self-consistency execution: <2s for 5 iterations
+
+### Reliability
+- AI service availability: 99.5%
+- Graceful degradation when AI unavailable
+- Automatic retry with exponential backoff (3 attempts)
+- Circuit breaker for LLM API calls
+
+### Security
+- Zero critical CVEs in production dependencies
+- JWT token expiration: 1 hour
+- Rate limiting: 100 req/min per user on AI endpoints
+- PII scrubbing before caching
+- GDPR-compliant data deletion within 30 days
+
+### Scalability
+- Horizontal scaling for stateless services
+- Redis cluster support for semantic cache
+- Connection pooling: DB (max 10), Redis (max 20)
+- Auto-scaling based on CPU >70%
+
+### Observability
+- Distributed tracing for all AI workflows
+- Structured JSON logs
+- Prometheus metrics with 15s scrape interval
+- Grafana dashboards for AI performance
+- Alert rules for degraded performance
+
+## Success Metrics
+
+### Primary KPIs
+1. **Structured Output Success Rate**: ≥95% (currently N/A)
+2. **Cache Latency Improvement**: <200ms reduction (currently N/A)
+3. **Critical Security Findings**: 0 (currently unknown)
+4. **AI Response Consistency**: <5% variance (currently N/A)
+
+### Secondary Metrics
+1. Cache hit rate: >70%
+2. AI service uptime: >99.5%
+3. Mean time to recovery (MTTR): <15 minutes
+4. Code coverage: >80% for new AI components
+5. Documentation coverage: 100% for AI workflows
+
+### Business Impact
+- 50% reduction in pricing decision cycle time
+- 80% reduction in manual AI response handling
+- 30% cost savings from semantic caching
+- Zero security incidents related to AI workflows
+
+## Implementation Phases
+
+### Phase 1: Foundation (Weeks 1-2)
+**Objective**: Establish core AI infrastructure and security baseline
+
+**Deliverables**:
+- Spring AI 1.0.1 integration complete
+- Security vulnerabilities (CVE-2024-38821) remediated
+- Redis VectorStore provisioned
+- OpenRewrite upgrade executed
+
+**Success Criteria**:
+- All tests passing after Spring AI upgrade
+- Security scan shows 0 critical vulnerabilities
+- Redis VectorStore accepting embeddings
+
+### Phase 2: Core AI Features (Weeks 3-5)
+**Objective**: Implement routing, chaining, and structured outputs
+
+**Deliverables**:
+- AI routing workflows for 3 scenarios (billing, technical, risk)
+- AI chain workflows for pricing pipeline
+- BeanOutputParser integration
+- Extended DTOs with AI fields
+- Drools validation rules
+
+**Success Criteria**:
+- Routing accuracy >90% for known scenarios
+- Chain workflows complete end-to-end
+- Structured output parsing success rate >95%
+
+### Phase 3: Quality & Reliability (Weeks 6-7)
+**Objective**: Add prompt controls, self-consistency, and caching
+
+**Deliverables**:
+- ChatOptions configuration
+- Versioned prompt templates
+- Regression tests for AI outputs
+- Self-consistency implementation
+- Semantic cache activation
+
+**Success Criteria**:
+- Prompt templates version-controlled
+- Self-consistency confidence scores >80%
+- Cache hit rate >70%
+
+### Phase 4: Integration & Testing (Weeks 8-9)
+**Objective**: Complete integration, testing, and observability
+
+**Deliverables**:
+- CI/CD pipeline with AI tests
+- Distributed tracing
+- Prometheus metrics
+- Grafana dashboards
+- Comprehensive documentation
+
+**Success Criteria**:
+- All integration tests passing
+- Metrics flowing to Prometheus
+- Dashboards visualizing AI workflows
+- Runbooks completed
+
+## Risks & Mitigation
+
+### High-Priority Risks
+
+**Risk 1: Spring AI Dependency Conflicts**
+- Probability: Medium
+- Impact: High
+- Mitigation: Version pinning, thorough integration testing, rollback plan
+
+**Risk 2: Cache Poisoning**
+- Probability: Low
+- Impact: High
+- Mitigation: Input validation, similarity threshold tuning, monitoring
+
+**Risk 3: Performance Degradation**
+- Probability: Medium
+- Impact: Medium
+- Mitigation: Load testing, caching, circuit breakers, auto-scaling
+
+**Risk 4: AI Response Inconsistency**
+- Probability: Medium
+- Impact: High
+- Mitigation: Self-consistency pattern, regression testing, temperature controls
+
+**Risk 5: Security Vulnerabilities**
+- Probability: Low
+- Impact: Critical
+- Mitigation: Regular scanning, automated patching, security reviews
+
+## Open Questions
+
+1. **Redis Deployment**: Managed (Redis Cloud) vs. self-hosted cluster?
+2. **LLM Provider**: OpenAI vs. Azure OpenAI vs. self-hosted models?
+3. **Governance**: Policies for storing/replaying AI responses for compliance?
+4. **Budget**: Cost projections for LLM API calls at 1000 req/day?
+5. **Enterprise Standards**: Integration with company-wide AI governance framework?
+
+## Dependencies
+
+### External Dependencies
+- Spring AI 1.0.1 or later (stable release)
+- Redis 7.x with RediSearch module for vector support
+- OpenAI API access or equivalent LLM provider
+- Java 21 runtime
+- PostgreSQL 15+
+
+### Internal Dependencies
+- Existing Drools rule sets compatibility
+- Financial metrics calculation services
+- Authentication/authorization infrastructure
+- Monitoring stack (Prometheus/Grafana)
+
+### Third-Party Integrations
+- OpenAI API for LLM inference
+- Redis Cloud or self-hosted Redis cluster
+- GitHub Actions for CI/CD
+- OWASP Dependency Check for security scanning
+
+## Acceptance Criteria for Launch
+
+### Must-Have (P0)
+- [ ] All 7 features implemented and tested
+- [ ] Zero critical security vulnerabilities
+- [ ] 95% structured output success rate achieved
+- [ ] Cache hit rate >70% in production
+- [ ] All documentation complete (API docs, runbooks, playbooks)
+- [ ] Performance benchmarks met (<500ms AI latency)
+- [ ] CI/CD pipeline includes AI workflow tests
+- [ ] Distributed tracing operational
+
+### Should-Have (P1)
+- [ ] Grafana dashboards deployed
+- [ ] Self-consistency confidence scores >80%
+- [ ] Prompt templates version-controlled
+- [ ] Regression tests covering all pricing scenarios
+- [ ] Auto-scaling configured
+- [ ] GDPR compliance verified
+
+### Nice-to-Have (P2)
+- [ ] A/B testing framework for prompt templates
+- [ ] Advanced cache analytics
+- [ ] Cost optimization dashboard
+- [ ] Multi-model LLM support
+
+## Stakeholder Approval
+
+**Product Owner**: [Pending]
+**Engineering Lead**: [Pending]
+**Security Lead**: [Pending]
+**Operations Lead**: [Pending]
+
+## Appendix
+
+### Glossary
+- **BeanOutputParser**: Spring AI component for LLM JSON to Java object conversion
+- **Routing Workflow**: AI pattern for directing requests to specialized prompts
+- **Chain Workflow**: Sequential AI prompt execution with context passing
+- **Self-Consistency**: Multiple AI inferences with majority voting for reliability
+- **Semantic Cache**: Vector similarity-based caching for AI responses
+- **VectorStore**: Database optimized for vector similarity search
+
+### References
+- Spring AI Documentation: https://docs.spring.io/spring-ai/
+- Drools 8.44 Documentation: https://www.drools.org/
+- Redis Vector Search: https://redis.io/docs/stack/search/
+- CVE-2024-38821: Spring WebFlux Security Advisory
+- OpenRewrite Recipes: https://docs.openrewrite.org/
+
+---
+
+**Document Version**: 1.0
+**Last Updated**: 2025-10-20
+**Status**: Ready for Task Generation

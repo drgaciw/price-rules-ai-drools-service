@@ -5,6 +5,7 @@ import com.example.pricerulesaidrools.drools.dto.RuleDeploymentResult;
 import com.example.pricerulesaidrools.drools.dto.RuleExecutionMetrics;
 import com.example.pricerulesaidrools.drools.dto.RuleValidationResult;
 import com.example.pricerulesaidrools.drools.model.RuleSetMetadata;
+import org.kie.api.KieBase;
 
 import java.util.List;
 import java.util.Map;
@@ -112,4 +113,23 @@ public interface DroolsIntegrationService {
      * @return Rule cache metrics
      */
     RuleCacheMetrics getRuleCacheMetrics(String ruleSetId);
+    
+    /**
+     * Gets the current KieBase (Drools knowledge base)
+     * 
+     * @return The KieBase instance
+     */
+    KieBase getKieBase();
+    
+    /**
+     * Gets a KieSession for rule execution
+     *
+     * @return A new or existing KieSession instance
+     */
+    org.kie.api.runtime.KieSession getKieSession();
+    
+    /**
+     * Reloads all rules from storage
+     */
+    void reloadRules();
 }

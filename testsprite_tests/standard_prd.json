@@ -1,0 +1,237 @@
+{
+  "meta": {
+    "project": "price-rules-ai-drools",
+    "date": "2025-10-20",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "price-rules-ai-drools is a Java-based microservice integrating Drools rule engine with AI enhancements to provide dynamic, intelligent pricing rule evaluations. Leveraging Spring Boot, Spring AI patterns, and Redis semantic caching, it facilitates scalable, secure, and performance-optimized AI-orchestrated pricing workflows with auditability and enhanced security.",
+  "core_goals": [
+    "Integrate Spring AI routing and chain workflows for AI-orchestrated pricing rule evaluations",
+    "Enable structured, type-safe AI outputs parsed into Drools compatible DTOs for seamless rule ingestion",
+    "Implement semantic caching using Redis VectorStore for improved AI response performance",
+    "Harden security postures addressing known vulnerabilities and enforce strict access control",
+    "Provide comprehensive observability, audit, and monitoring for AI workflows and rule executions",
+    "Automate regression and performance testing for AI workflows to ensure reliability and consistency",
+    "Deliver extensible prompt template management and quality controls for diverse pricing scenarios",
+    "Implement self-consistency pattern with multiple inference and majority voting for high-confidence AI outputs"
+  ],
+  "key_features": [
+    "AI-Orchestrated Rule Workflows with routing for deal types and chain workflows for sequential reasoning",
+    "Structured AI Output Parsing using Spring AI BeanOutputParser for DTO conversion",
+    "Semantic Cache Service with Redis VectorStore for similarity-based caching of AI responses",
+    "Prompt Quality Controls including versioned prompt templates and ChatOptions configurations",
+    "Self-Consistency Execution pattern conducting multiple AI inferences with confidence scoring",
+    "Security Enhancements including JWT-based authentication, CVE fixes, and input field whitelisting",
+    "Comprehensive Rule Testing, Conflict Detection, and Rule Template Management APIs",
+    "Audit Trail and Execution History tracking across rule creation and AI decision processes",
+    "Performance Optimizations with cache hit monitoring, latency improvements, and horizontal scalability support"
+  ],
+  "user_flow_summary": [
+    "Users authenticate through JWT-based auth API to access pricing and rule management endpoints",
+    "Pricing analysts submit pricing requests which are routed through AI-orchestrated workflows selecting appropriate prompts based on deal characteristics",
+    "AI responses are parsed into structured Java DTOs and validated before feeding into Drools for dynamic pricing evaluations",
+    "Semantic cache is checked for similarity matches to reduce AI query latency and improve performance",
+    "Rule testing and conflict detection flows validate rule integrity and prevent inconsistencies before deployment",
+    "Audit logs and execution histories are accessible for compliance and troubleshooting",
+    "Administrators manage prompt templates, configure AI workflow parameters, and monitor system metrics through dedicated APIs and dashboards"
+  ],
+  "validation_criteria": [
+    "AI routing workflows correctly route requests with over 95% accuracy across test scenarios",
+    "BeanOutputParser correctly converts AI JSON responses into Java DTOs without errors",
+    "Semantic cache delivers >70% hit rate and reduces latency by at least 200ms in repeated query tests",
+    "All critical CVEs found in dependency scans are addressed before production release",
+    "Rule testing framework detects conflicts and rejects invalid rule submissions",
+    "Security tests verify no web resource bypass and ensure WebDataBinder field whitelisting enforcement",
+    "End-to-end integration tests validate AI-driven pricing evaluations against expected financial metrics",
+    "Performance tests demonstrate system supports 1000 concurrent pricing evaluations with <500ms AI query latency",
+    "Audit logs capture complete trace for AI decision processes and routing chain executions"
+  ],
+  "code_summary": {
+    "projectName": "price-rules-ai-drools",
+    "description": "A microservice that integrates with the Drools rule engine to provide dynamic pricing rule evaluation capabilities with AI-enhanced features",
+    "techStack": {
+      "language": "Java 21",
+      "framework": "Spring Boot 3.4.5",
+      "buildTool": "Maven",
+      "database": "PostgreSQL",
+      "cache": "Redis",
+      "rulesEngine": "Drools 8.44.0.Final",
+      "security": "JWT with Spring Security",
+      "monitoring": "Micrometer + Prometheus",
+      "documentation": "SpringDoc OpenAPI",
+      "testing": "JUnit, TestContainers, H2"
+    },
+    "architecture": {
+      "type": "Microservice",
+      "pattern": "Layered Architecture",
+      "layers": [
+        "Controller Layer (REST APIs)",
+        "Service Layer (Business Logic)",
+        "Repository Layer (Data Access)",
+        "Security Layer (Authentication/Authorization)",
+        "AI Integration Layer (Sequential Thinking, Context7)"
+      ]
+    },
+    "features": [
+      {
+        "name": "Rule Engine Integration",
+        "description": "Drools rule engine for dynamic pricing rule evaluation",
+        "components": [
+          "DroolsIntegrationService",
+          "RuleController",
+          "RuleSetRepository",
+          "RuleRepository"
+        ]
+      },
+      {
+        "name": "Financial Metrics Processing",
+        "description": "Calculate and manage ARR, TCV, ACV, CLV metrics",
+        "components": [
+          "FinancialMetricsService",
+          "FinancialMetricsCalculator",
+          "MetricsHistoryService",
+          "FinancialMetricsController"
+        ]
+      },
+      {
+        "name": "Pricing Strategies",
+        "description": "Multiple pricing strategies (volume, value-based, risk-adjusted)",
+        "components": [
+          "PricingService",
+          "PricingStrategyFactory",
+          "VolumePricingStrategy",
+          "ValuePricingStrategy",
+          "RiskAdjustedPricingStrategy"
+        ]
+      },
+      {
+        "name": "AI-Enhanced Rule Creation",
+        "description": "AI-assisted rule generation and optimization",
+        "components": [
+          "RuleCreationService",
+          "SequentialThinkingService",
+          "Context7Service",
+          "AIRuleController"
+        ]
+      },
+      {
+        "name": "Security & Authentication",
+        "description": "JWT-based authentication with role-based access control",
+        "components": [
+          "JwtUtils",
+          "JwtAuthenticationFilter",
+          "SecurityConfig",
+          "AuthController",
+          "UserDetailsServiceImpl"
+        ]
+      },
+      {
+        "name": "Rule Testing & Validation",
+        "description": "Comprehensive rule testing, conflict detection, and templates",
+        "components": [
+          "RuleTestRunner",
+          "RuleConflictService",
+          "RuleTemplateService",
+          "RuleTestController"
+        ]
+      },
+      {
+        "name": "Audit & History Tracking",
+        "description": "Complete audit trail and execution history",
+        "components": [
+          "RuleAuditLogRepository",
+          "RuleExecutionHistoryRepository",
+          "RuleCreationRecordRepository",
+          "MetricsSnapshotScheduler"
+        ]
+      }
+    ],
+    "dependencies": {
+      "core": [
+        "spring-boot-starter-web",
+        "spring-boot-starter-data-jpa",
+        "spring-boot-starter-security",
+        "spring-boot-starter-validation",
+        "spring-boot-starter-data-redis",
+        "spring-boot-starter-actuator",
+        "spring-boot-starter-cache"
+      ],
+      "cloud": [
+        "spring-cloud-starter",
+        "micrometer-tracing"
+      ],
+      "rulesEngine": [
+        "drools-core:8.44.0.Final",
+        "drools-compiler:8.44.0.Final",
+        "drools-mvel:8.44.0.Final",
+        "kie-api:8.44.0.Final",
+        "drools-templates:8.44.0.Final"
+      ],
+      "database": [
+        "postgresql:42.7.1",
+        "liquibase-core:4.26.0",
+        "jedis:4.0.0"
+      ],
+      "security": [
+        "jjwt-api:0.11.5",
+        "jjwt-impl:0.11.5",
+        "jjwt-jackson:0.11.5"
+      ],
+      "monitoring": [
+        "micrometer-registry-prometheus",
+        "springdoc-openapi-starter-webmvc-ui:2.3.0"
+      ],
+      "utilities": [
+        "lombok:1.18.30"
+      ],
+      "testing": [
+        "spring-boot-starter-test",
+        "spring-security-test",
+        "testcontainers:1.19.3",
+        "h2"
+      ]
+    },
+    "apiEndpoints": [
+      "/api/rules - Rule management CRUD operations",
+      "/api/pricing - Pricing evaluation and financial metrics",
+      "/api/ai/rules - AI-assisted rule creation",
+      "/api/auth - JWT authentication (login/signup)",
+      "/api/actuator - Monitoring and health checks",
+      "/api/templates - Rule template management",
+      "/api/conflicts - Rule conflict detection",
+      "/api/test - Rule testing endpoints"
+    ],
+    "dataModels": [
+      "RuleSet",
+      "Rule",
+      "FinancialMetrics",
+      "FinancialMetricsSnapshot",
+      "Customer",
+      "Quote",
+      "PricingRequest",
+      "PricingResult",
+      "RuleAuditLog",
+      "RuleExecutionHistory",
+      "RuleCreationRecord",
+      "User",
+      "Role"
+    ],
+    "configurationProfiles": [
+      "dev - Development environment (default)",
+      "test - Testing with H2 in-memory database",
+      "prod - Production with PostgreSQL and Redis"
+    ],
+    "improvements": {
+      "planned": [
+        "Spring AI integration (currently commented out)",
+        "Advanced AI workflows (Routing, Chain)",
+        "Structured AI outputs with BeanOutputParser",
+        "Semantic caching with Redis VectorStore",
+        "Self-consistency patterns for AI reliability",
+        "Enhanced security (CVE fixes, WebDataBinder hardening)",
+        "Observability hooks and distributed tracing",
+        "Prompt quality controls with ChatOptions"
+      ]
+    }
+  }
+}
