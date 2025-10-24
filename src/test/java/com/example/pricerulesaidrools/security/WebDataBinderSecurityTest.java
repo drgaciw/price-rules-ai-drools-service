@@ -3,7 +3,6 @@ package com.example.pricerulesaidrools.security;
 import com.example.pricerulesaidrools.ai.controller.AIRuleController;
 import com.example.pricerulesaidrools.controller.FinancialMetricsController;
 import com.example.pricerulesaidrools.drools.controller.RuleController;
-import com.example.pricerulesaidrools.security.config.WebDataBinderConfig;
 import com.example.pricerulesaidrools.security.controller.AuthController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +12,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.Mock;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,11 +32,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Security tests for WebDataBinder field whitelisting configuration.
  *
- * These tests verify that mass assignment vulnerabilities are prevented by ensuring
+ * These tests verify that mass assignment vulnerabilities are prevented by
+ * ensuring
  * only whitelisted fields are accepted in request bodies.
  *
  * OWASP Reference: A5:2021 – Security Misconfiguration
- * CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes
+ * CWE-915: Improperly Controlled Modification of Dynamically-Determined Object
+ * Attributes
  *
  * @author Security Team
  * @since 1.0.0
@@ -53,20 +54,19 @@ public class WebDataBinderSecurityTest {
 
     @Autowired
     private WebApplicationContext context;
-
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @Mock
     private RuleController ruleController;
 
-    @MockBean
+    @Mock
     private AuthController authController;
 
-    @MockBean
+    @Mock
     private FinancialMetricsController financialMetricsController;
 
-    @MockBean
+    @Mock
     private AIRuleController aiRuleController;
 
     @BeforeEach
@@ -154,7 +154,7 @@ public class WebDataBinderSecurityTest {
 
         // Attempt to inject additional fields
         loginRequest.put("isAdmin", true);
-        loginRequest.put("roles", new String[]{"ROLE_ADMIN"});
+        loginRequest.put("roles", new String[] { "ROLE_ADMIN" });
         loginRequest.put("bypassAuth", true);
 
         mockMvc.perform(post("/auth/login")
@@ -173,7 +173,7 @@ public class WebDataBinderSecurityTest {
         signupRequest.put("password", "securepass");
         signupRequest.put("firstName", "Test");
         signupRequest.put("lastName", "User");
-        signupRequest.put("roles", new String[]{"user"});
+        signupRequest.put("roles", new String[] { "user" });
 
         // Attempt to inject dangerous fields
         signupRequest.put("id", 999);
@@ -315,10 +315,10 @@ public class WebDataBinderSecurityTest {
     @DisplayName("Verify: No controller accepts 'id' field in creation requests")
     void testNoControllerAcceptsIdFieldInCreation() throws Exception {
         String[] creationEndpoints = {
-            "/api/v1/drools/rules",
-            "/auth/signup",
-            "/api/v1/financial-metrics/calculate",
-            "/ai/rules"
+                "/api/v1/drools/rules",
+                "/auth/signup",
+                "/api/v1/financial-metrics/calculate",
+                "/ai/rules"
         };
 
         for (String endpoint : creationEndpoints) {

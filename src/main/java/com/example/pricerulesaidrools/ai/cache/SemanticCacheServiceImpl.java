@@ -46,6 +46,7 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
     private final AtomicLong cacheMisses = new AtomicLong(0);
     private final AtomicLong totalSimilarityScore = new AtomicLong(0);
     private LocalDateTime lastResetTime = LocalDateTime.now();
+    private LocalDateTime lastAccessTime = null; // Initialize to null, will be set when cache is accessed
 
     private static final String METADATA_RESPONSE_KEY = "cached_response";
     private static final String METADATA_QUERY_KEY = "original_query";
@@ -54,6 +55,9 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
 
     @Override
     public Optional<String> getCachedResponse(String query) {
+        // Update last access time
+        lastAccessTime = LocalDateTime.now();
+
         if (!cacheEnabled) {
             log.debug("Cache is disabled, skipping cache lookup");
             cacheMisses.incrementAndGet();
@@ -114,6 +118,9 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
 
     @Override
     public void cacheResponse(String query, String response) {
+        // Update last access time
+        lastAccessTime = LocalDateTime.now();
+
         if (!cacheEnabled) {
             log.debug("Cache is disabled, skipping cache storage");
             return;
@@ -158,6 +165,7 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
             log.info("Clearing semantic cache");
             vectorStore.delete(List.of()); // Clear all documents
             resetStatistics();
+            lastAccessTime = LocalDateTime.now(); // Update last access time
             log.info("Semantic cache cleared successfully");
         } catch (Exception e) {
             log.error("Error clearing cache", e);
@@ -181,6 +189,7 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
                 .maxCacheSize(maxCacheSize)
                 .averageSimilarity(avgSimilarity)
                 .lastResetTime(lastResetTime)
+                .lastAccessTime(lastAccessTime)
                 .timestamp(LocalDateTime.now())
                 .build();
     }
@@ -191,6 +200,7 @@ public class SemanticCacheServiceImpl implements SemanticCacheService {
         cacheMisses.set(0);
         totalSimilarityScore.set(0);
         lastResetTime = LocalDateTime.now();
+        lastAccessTime = null; // Reset last access time as well
         log.info("Cache statistics reset");
     }
 

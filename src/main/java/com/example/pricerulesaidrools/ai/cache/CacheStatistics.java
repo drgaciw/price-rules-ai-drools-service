@@ -18,7 +18,8 @@ import java.time.LocalDateTime;
 public class CacheStatistics {
 
     /**
-     * Total number of cache hits (queries found in cache above similarity threshold)
+     * Total number of cache hits (queries found in cache above similarity
+     * threshold)
      */
     private long cacheHits;
 
@@ -58,6 +59,11 @@ public class CacheStatistics {
     private LocalDateTime lastResetTime;
 
     /**
+     * Time when cache was last accessed
+     */
+    private LocalDateTime lastAccessTime;
+
+    /**
      * Time when statistics were generated
      */
     @Builder.Default
@@ -69,8 +75,8 @@ public class CacheStatistics {
     public void calculateHitRate() {
         this.totalQueries = this.cacheHits + this.cacheMisses;
         this.hitRate = this.totalQueries > 0
-            ? (double) this.cacheHits / this.totalQueries * 100.0
-            : 0.0;
+                ? (double) this.cacheHits / this.totalQueries * 100.0
+                : 0.0;
     }
 
     /**
@@ -99,5 +105,21 @@ public class CacheStatistics {
         this.hitRate = 0.0;
         this.averageSimilarity = 0.0;
         this.lastResetTime = LocalDateTime.now();
+    }
+
+    /**
+     * Update last access time to current time.
+     */
+    public void updateLastAccessTime() {
+        this.lastAccessTime = LocalDateTime.now();
+    }
+
+    /**
+     * Get the last access time.
+     * 
+     * @return LocalDateTime of last access
+     */
+    public LocalDateTime getLastAccessTime() {
+        return this.lastAccessTime;
     }
 }

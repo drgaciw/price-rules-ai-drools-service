@@ -1,18 +1,16 @@
 package com.example.pricerulesaidrools.security;
 
-import com.example.pricerulesaidrools.security.config.WebSecurityConfig;
-import com.example.pricerulesaidrools.security.jwt.JwtAuthenticationEntryPoint;
-import com.example.pricerulesaidrools.security.jwt.JwtAuthenticationFilter;
 import com.example.pricerulesaidrools.security.jwt.JwtUtils;
 import com.example.pricerulesaidrools.security.service.UserDetailsServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
@@ -20,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Security Tests for CVE-2024-38821 Prevention
@@ -35,8 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
-    "spring.security.debug=true",
-    "logging.level.org.springframework.security=DEBUG"
+        "spring.security.debug=true",
+        "logging.level.org.springframework.security=DEBUG"
 })
 @DisplayName("Web Security Tests - CVE-2024-38821 Prevention")
 public class WebSecurityTest {
@@ -44,10 +43,10 @@ public class WebSecurityTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Mock
     private UserDetailsServiceImpl userDetailsService;
 
-    @MockBean
+    @Mock
     private JwtUtils jwtUtils;
 
     /**
@@ -56,19 +55,19 @@ public class WebSecurityTest {
      */
     @ParameterizedTest
     @ValueSource(strings = {
-        "/static/test.js",
-        "/static/css/style.css",
-        "/static/../etc/passwd",
-        "/resources/test.html",
-        "/resources/images/logo.png",
-        "/public/index.html",
-        "/public/js/app.js",
-        "/webjars/jquery/jquery.min.js"
+            "/static/test.js",
+            "/static/css/style.css",
+            "/static/../etc/passwd",
+            "/resources/test.html",
+            "/resources/images/logo.png",
+            "/public/index.html",
+            "/public/js/app.js",
+            "/webjars/jquery/jquery.min.js"
     })
     @DisplayName("Should deny access to static resource paths")
     void testStaticResourcesAreDenied(String path) throws Exception {
         mockMvc.perform(get(path))
-            .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     /**
@@ -76,19 +75,19 @@ public class WebSecurityTest {
      */
     @ParameterizedTest
     @ValueSource(strings = {
-        "/api/../static/test.js",
-        "/api/../../etc/passwd",
-        "/api/%2e%2e/static/test.js",
-        "/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd",
-        "/api/./././static/test.js",
-        "/api//static/test.js",
-        "/api/\\/static/test.js",
-        "/api/static\\test.js"
+            "/api/../static/test.js",
+            "/api/../../etc/passwd",
+            "/api/%2e%2e/static/test.js",
+            "/api/%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+            "/api/./././static/test.js",
+            "/api//static/test.js",
+            "/api/\\/static/test.js",
+            "/api/static\\test.js"
     })
     @DisplayName("Should block path traversal attempts")
     void testPathTraversalBlocked(String path) throws Exception {
         mockMvc.perform(get(path))
-            .andExpect(status().is4xxClientError());
+                .andExpect(status().is4xxClientError());
     }
 
     /**
@@ -96,17 +95,17 @@ public class WebSecurityTest {
      */
     @ParameterizedTest
     @ValueSource(strings = {
-        "/test.js",
-        "/style.css",
-        "/index.html",
-        "/config.json",
-        "/api/test.js",
-        "/api/style.css"
+            "/test.js",
+            "/style.css",
+            "/index.html",
+            "/config.json",
+            "/api/test.js",
+            "/api/style.css"
     })
     @DisplayName("Should block direct access to files with common extensions")
     void testFileExtensionsBlocked(String path) throws Exception {
         mockMvc.perform(get(path))
-            .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     /**
@@ -118,12 +117,22 @@ public class WebSecurityTest {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"test\",\"password\":\"test\"}"))
-            .andExpect(status().isOk().or(status().isUnauthorized()));
+                .andExpect(result -> {
+                    int statusCode = result.getResponse().getStatus();
+                    if (statusCode != 200 && statusCode != 401) {
+                        throw new AssertionError("Expected status 200 or 401, but got " + statusCode);
+                    }
+                });
 
         mockMvc.perform(post("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"test\",\"password\":\"test\",\"email\":\"test@test.com\"}"))
-            .andExpect(status().isOk().or(status().isBadRequest()));
+                .andExpect(result -> {
+                    int statusCode = result.getResponse().getStatus();
+                    if (statusCode != 200 && statusCode != 400) {
+                        throw new AssertionError("Expected status 200 or 400, but got " + statusCode);
+                    }
+                });
     }
 
     /**
@@ -133,10 +142,10 @@ public class WebSecurityTest {
     @DisplayName("Should allow access to health endpoints")
     void testHealthEndpointsAccessible() throws Exception {
         mockMvc.perform(get("/actuator/health"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/actuator/info"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
     }
 
     /**
@@ -146,13 +155,13 @@ public class WebSecurityTest {
     @DisplayName("Should require authentication for protected actuator endpoints")
     void testProtectedActuatorEndpoints() throws Exception {
         mockMvc.perform(get("/actuator/env"))
-            .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/actuator/beans"))
-            .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/actuator/configprops"))
-            .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
     }
 
     /**
@@ -163,7 +172,7 @@ public class WebSecurityTest {
     @DisplayName("Should require ADMIN role for actuator management endpoints")
     void testActuatorRequiresAdminRole() throws Exception {
         mockMvc.perform(get("/actuator/env"))
-            .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     /**
@@ -174,7 +183,7 @@ public class WebSecurityTest {
     @DisplayName("Should allow ADMIN users to access actuator endpoints")
     void testAdminCanAccessActuator() throws Exception {
         mockMvc.perform(get("/actuator/metrics"))
-            .andExpect(status().isOk());
+                .andExpect(status().isOk());
     }
 
     /**
@@ -184,14 +193,14 @@ public class WebSecurityTest {
     @DisplayName("Should set security headers on responses")
     void testSecurityHeaders() throws Exception {
         mockMvc.perform(get("/actuator/health"))
-            .andExpect(header().exists("X-Content-Type-Options"))
-            .andExpect(header().string("X-Content-Type-Options", "nosniff"))
-            .andExpect(header().exists("X-Frame-Options"))
-            .andExpect(header().string("X-Frame-Options", "DENY"))
-            .andExpect(header().exists("X-XSS-Protection"))
-            .andExpect(header().exists("Content-Security-Policy"))
-            .andExpect(header().exists("Referrer-Policy"))
-            .andExpect(header().exists("Permissions-Policy"));
+                .andExpect(header().exists("X-Content-Type-Options"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().exists("X-Frame-Options"))
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().exists("X-XSS-Protection"))
+                .andExpect(header().exists("Content-Security-Policy"))
+                .andExpect(header().exists("Referrer-Policy"))
+                .andExpect(header().exists("Permissions-Policy"));
     }
 
     /**
@@ -201,7 +210,7 @@ public class WebSecurityTest {
     @DisplayName("Should set HSTS header")
     void testHSTSHeader() throws Exception {
         mockMvc.perform(get("/actuator/health"))
-            .andExpect(header().exists("Strict-Transport-Security"));
+                .andExpect(header().exists("Strict-Transport-Security"));
     }
 
     /**
@@ -211,10 +220,10 @@ public class WebSecurityTest {
     @DisplayName("Should require authentication for API endpoints")
     void testApiEndpointsRequireAuth() throws Exception {
         mockMvc.perform(get("/api/rules"))
-            .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/api/pricing"))
-            .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
     }
 
     /**
@@ -224,7 +233,7 @@ public class WebSecurityTest {
     @DisplayName("Should block null byte injection attempts")
     void testNullByteInjectionBlocked() throws Exception {
         mockMvc.perform(get("/api/test%00.js"))
-            .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 
     /**
@@ -232,14 +241,14 @@ public class WebSecurityTest {
      */
     @ParameterizedTest
     @ValueSource(strings = {
-        "/api/%252e%252e/static/test.js",
-        "/api/%25%32%65%25%32%65/static/test.js",
-        "/api/%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd"
+            "/api/%252e%252e/static/test.js",
+            "/api/%25%32%65%25%32%65/static/test.js",
+            "/api/%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd"
     })
     @DisplayName("Should block URL encoding attacks")
     void testUrlEncodingAttacksBlocked(String path) throws Exception {
         mockMvc.perform(get(path))
-            .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 
     /**
@@ -248,11 +257,11 @@ public class WebSecurityTest {
     @Test
     @DisplayName("Should block non-allowed HTTP methods")
     void testBlockedHttpMethods() throws Exception {
-        mockMvc.perform(request("TRACE", "/api/test"))
-            .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(request(HttpMethod.valueOf("TRACE"), "/api/test"))
+                .andExpect(status().isMethodNotAllowed());
 
-        mockMvc.perform(request("PATCH", "/api/test"))
-            .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(request(HttpMethod.PATCH, "/api/test"))
+                .andExpect(status().isMethodNotAllowed());
     }
 
     /**
@@ -266,9 +275,9 @@ public class WebSecurityTest {
                 .header("Origin", "https://app.yourdomain.com")
                 .header("Access-Control-Request-Method", "POST")
                 .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
-            .andExpect(status().isOk())
-            .andExpect(header().exists("Access-Control-Allow-Origin"))
-            .andExpect(header().exists("Access-Control-Allow-Methods"))
-            .andExpect(header().exists("Access-Control-Allow-Headers"));
+                .andExpect(status().isOk())
+                .andExpect(header().exists("Access-Control-Allow-Origin"))
+                .andExpect(header().exists("Access-Control-Allow-Methods"))
+                .andExpect(header().exists("Access-Control-Allow-Headers"));
     }
 }
