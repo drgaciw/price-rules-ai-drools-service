@@ -13,16 +13,15 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Implementation of StructuredOutputParser using Spring AI's BeanOutputParser.
- * Provides type-safe parsing of LLM responses into Java objects with validation.
+ * Provides type-safe parsing of LLM responses into Java objects with
+ * validation.
  */
 @Slf4j
 @Service
@@ -32,7 +31,8 @@ public class StructuredOutputParserImpl implements StructuredOutputParser {
     private final Validator validator;
 
     private static final Pattern JSON_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)```", Pattern.MULTILINE);
-    private static final Pattern INLINE_JSON_PATTERN = Pattern.compile("\\{[\\s\\S]*\\}", Pattern.MULTILINE);
+    private static final Pattern INLINE_JSON_PATTERN = Pattern.compile("(\\{[\\s\\S]*\\}|\\[[\\s\\S]*\\])",
+            Pattern.MULTILINE);
 
     @Autowired(required = false)
     public StructuredOutputParserImpl(Validator validator) {
@@ -72,11 +72,10 @@ public class StructuredOutputParserImpl implements StructuredOutputParser {
             log.error("Failed to parse LLM response to {}: {}", targetClass.getName(), e.getMessage());
 
             throw new IllegalArgumentException(
-                String.format("Failed to parse LLM response to %s: %s",
-                    targetClass.getSimpleName(),
-                    e.getMessage()),
-                e
-            );
+                    String.format("Failed to parse LLM response to %s: %s",
+                            targetClass.getSimpleName(),
+                            e.getMessage()),
+                    e);
         }
     }
 
@@ -95,18 +94,16 @@ public class StructuredOutputParserImpl implements StructuredOutputParser {
                 List<String> errors = new ArrayList<>();
                 for (ConstraintViolation<T> violation : violations) {
                     String error = String.format("%s: %s",
-                        violation.getPropertyPath(),
-                        violation.getMessage()
-                    );
+                            violation.getPropertyPath(),
+                            violation.getMessage());
                     errors.add(error);
                     log.warn("Validation error: {}", error);
                 }
 
                 throw new IllegalArgumentException(
-                    String.format("Validation failed with %d errors: %s",
-                        errors.size(),
-                        String.join("; ", errors))
-                );
+                        String.format("Validation failed with %d errors: %s",
+                                errors.size(),
+                                String.join("; ", errors)));
             }
 
             log.debug("Validation passed for parsed object");
@@ -118,7 +115,8 @@ public class StructuredOutputParserImpl implements StructuredOutputParser {
     }
 
     @Override
-    public <T> AIStructuredResponse<T> parseToStructuredResponse(String llmResponse, Class<T> targetClass, Double confidence) {
+    public <T> AIStructuredResponse<T> parseToStructuredResponse(String llmResponse, Class<T> targetClass,
+            Double confidence) {
         log.debug("Parsing to structured response for class: {}", targetClass.getName());
 
         long startTime = System.currentTimeMillis();
@@ -192,18 +190,6 @@ public class StructuredOutputParserImpl implements StructuredOutputParser {
     }
 
     /**
-     * Validates if a string is valid JSON
-     */
-    private boolean isValidJson(String json) {
-        try {
-            objectMapper.readTree(json);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
      * Creates a sample format string for a given class to guide LLM responses
      */
     public <T> String getFormatInstructions(Class<T> targetClass) {
@@ -213,10 +199,9 @@ public class StructuredOutputParserImpl implements StructuredOutputParser {
             String jsonSchema = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(instance);
 
             return String.format(
-                "Please provide your response in JSON format matching this schema:\n```json\n%s\n```\n" +
-                "Ensure all required fields are populated with appropriate values.",
-                jsonSchema
-            );
+                    "Please provide your response in JSON format matching this schema:\n```json\n%s\n```\n" +
+                            "Ensure all required fields are populated with appropriate values.",
+                    jsonSchema);
         } catch (Exception e) {
             log.warn("Could not generate format instructions for {}: {}", targetClass.getName(), e.getMessage());
             return "Please provide your response in valid JSON format for " + targetClass.getSimpleName();

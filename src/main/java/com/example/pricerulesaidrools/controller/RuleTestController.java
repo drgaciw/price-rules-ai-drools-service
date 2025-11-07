@@ -188,6 +188,7 @@ public class RuleTestController {
             double basePrice = Double.parseDouble(params.getOrDefault("basePrice", "10000").toString());
             
             // Extract financial metrics
+            @SuppressWarnings("unchecked")
             Map<String, Object> metricsParams = (Map<String, Object>) params.getOrDefault("financialMetrics", new HashMap<>());
             
             FinancialMetrics metrics = FinancialMetrics.builder()
@@ -214,6 +215,7 @@ public class RuleTestController {
                     .build();
             
             // Extract expected results
+            @SuppressWarnings("unchecked")
             Map<String, Object> expectedResults = (Map<String, Object>) params.getOrDefault("expectedResults", new HashMap<>());
             
             // Create and return the test case

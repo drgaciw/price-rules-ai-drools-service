@@ -1,7 +1,6 @@
 package com.example.pricerulesaidrools.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,26 +17,26 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PricingStrategyRequest {
-    
+
     @NotBlank(message = "Quote ID is required")
     private String quoteId;
-    
+
     @NotBlank(message = "Strategy is required")
     private String strategy;
-    
+
     private Parameters parameters;
-    
+
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Parameters {
         private BigDecimal minCommitment;
-        
+
         private List<DiscountTier> discountTiers;
-        
+
         private List<PremiumTier> premiumTiers;
-        
+
         @Data
         @Builder
         @NoArgsConstructor
@@ -46,7 +45,7 @@ public class PricingStrategyRequest {
             private BigDecimal threshold;
             private BigDecimal discount;
         }
-        
+
         @Data
         @Builder
         @NoArgsConstructor

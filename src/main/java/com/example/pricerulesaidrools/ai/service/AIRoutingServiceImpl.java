@@ -20,7 +20,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Implementation of AI-orchestrated routing service for deal evaluations.
- * Routes pricing requests to specialized review paths based on configurable strategies.
+ * Routes pricing requests to specialized review paths based on configurable
+ * strategies.
  */
 @Service
 @Slf4j
@@ -38,8 +39,6 @@ public class AIRoutingServiceImpl implements AIRoutingService {
 
     @Override
     public RoutingDecision route(PricingRequest request) {
-        long startTime = System.currentTimeMillis();
-
         try {
             // Fetch customer and deal information
             Customer customer = customerRepository.findByCustomerId(request.getCustomerId())
@@ -224,10 +223,10 @@ public class AIRoutingServiceImpl implements AIRoutingService {
     }
 
     private RoutingDecision createRoutingDecision(EnhancedPricingRequest request,
-                                                   Map.Entry<String, Double> bestRoute,
-                                                   Map<String, Double> allScores,
-                                                   long startTime,
-                                                   boolean isFallback) {
+            Map.Entry<String, Double> bestRoute,
+            Map<String, Double> allScores,
+            long startTime,
+            boolean isFallback) {
         String route = bestRoute.getKey();
         routeUsageCount.computeIfAbsent(route, k -> new AtomicLong()).incrementAndGet();
 
@@ -245,8 +244,9 @@ public class AIRoutingServiceImpl implements AIRoutingService {
                 .dealValue(deal != null && deal.getValue() != null ? deal.getValue().doubleValue() : null)
                 .dealType(deal != null && deal.getType() != null ? deal.getType().toString() : null)
                 .complexity(deal != null && deal.getComplexity() != null ? deal.getComplexity().toString() : null)
-                .customerRiskScore(customer != null && customer.getChurnRiskScore() != null ?
-                        customer.getChurnRiskScore().doubleValue() : null)
+                .customerRiskScore(customer != null && customer.getChurnRiskScore() != null
+                        ? customer.getChurnRiskScore().doubleValue()
+                        : null)
                 .isFallback(isFallback)
                 .processingTimeMs(System.currentTimeMillis() - startTime)
                 .ruleScores(allScores)
@@ -255,9 +255,9 @@ public class AIRoutingServiceImpl implements AIRoutingService {
     }
 
     private RoutingDecision createFallbackDecision(EnhancedPricingRequest request,
-                                                    Map.Entry<String, Double> bestRoute,
-                                                    Map<String, Double> allScores,
-                                                    long startTime) {
+            Map.Entry<String, Double> bestRoute,
+            Map<String, Double> allScores,
+            long startTime) {
         String fallbackRoute = getFallbackRoute();
         routeUsageCount.computeIfAbsent(fallbackRoute, k -> new AtomicLong()).incrementAndGet();
 
@@ -281,8 +281,9 @@ public class AIRoutingServiceImpl implements AIRoutingService {
                 .dealValue(deal != null && deal.getValue() != null ? deal.getValue().doubleValue() : null)
                 .dealType(deal != null && deal.getType() != null ? deal.getType().toString() : null)
                 .complexity(deal != null && deal.getComplexity() != null ? deal.getComplexity().toString() : null)
-                .customerRiskScore(customer != null && customer.getChurnRiskScore() != null ?
-                        customer.getChurnRiskScore().doubleValue() : null)
+                .customerRiskScore(customer != null && customer.getChurnRiskScore() != null
+                        ? customer.getChurnRiskScore().doubleValue()
+                        : null)
                 .isFallback(true)
                 .processingTimeMs(System.currentTimeMillis() - startTime)
                 .ruleScores(allScores)
@@ -303,8 +304,7 @@ public class AIRoutingServiceImpl implements AIRoutingService {
                         deal != null && deal.getComplexity() != null ? deal.getComplexity() : "UNKNOWN");
             case "risk-review":
                 return String.format("Customer risk score %.1f requires risk review",
-                        customer != null && customer.getChurnRiskScore() != null ?
-                                customer.getChurnRiskScore() : 0);
+                        customer != null && customer.getChurnRiskScore() != null ? customer.getChurnRiskScore() : 0);
             case "general-review":
                 return "Standard review process for general deal evaluation";
             default:
@@ -388,8 +388,8 @@ public class AIRoutingServiceImpl implements AIRoutingService {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalDecisions", totalRoutingDecisions.get());
         stats.put("fallbackCount", fallbackCount.get());
-        stats.put("fallbackRate", totalRoutingDecisions.get() > 0 ?
-                (double) fallbackCount.get() / totalRoutingDecisions.get() : 0.0);
+        stats.put("fallbackRate",
+                totalRoutingDecisions.get() > 0 ? (double) fallbackCount.get() / totalRoutingDecisions.get() : 0.0);
 
         Map<String, Long> usageByRoute = new HashMap<>();
         routeUsageCount.forEach((route, count) -> usageByRoute.put(route, count.get()));

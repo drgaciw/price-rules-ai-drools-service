@@ -6,23 +6,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.HandlerMethod;
 
-import com.example.pricerulesaidrools.drools.controller.RuleController;
-import com.example.pricerulesaidrools.security.controller.AuthController;
-import com.example.pricerulesaidrools.controller.FinancialMetricsController;
-import com.example.pricerulesaidrools.ai.controller.AIRuleController;
-
 import java.lang.reflect.Method;
 
 import static org.mockito.Mockito.*;
+import org.mockito.Mockito;
 
 /**
  * Unit tests for WebDataBinder field whitelisting configuration.
  *
- * These tests verify that the WebDataBinder correctly configures field whitelisting
+ * These tests verify that the WebDataBinder correctly configures field
+ * whitelisting
  * for each controller to prevent mass assignment vulnerabilities.
  *
  * @author Security Team
@@ -52,11 +50,9 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("RuleController deployRules should whitelist correct fields")
-    void testRuleControllerDeployRulesWhitelist() throws Exception {
+    void testRuleControllerDeployRulesWhitelist() {
         // Arrange
-        when(handlerMethod.getBeanType()).thenReturn((Class) RuleController.class);
-        Method method = RuleController.class.getDeclaredMethod("deployRules", Object.class);
-        when(handlerMethod.getMethod()).thenReturn(method);
+        configureHandlerMethod("RuleController", "deployRules");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
@@ -68,12 +64,9 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("RuleController executeRules should whitelist only execution fields")
-    void testRuleControllerExecuteRulesWhitelist() throws Exception {
+    void testRuleControllerExecuteRulesWhitelist() {
         // Arrange
-        when(handlerMethod.getBeanType()).thenReturn((Class) RuleController.class);
-        Method method = Object.class.getDeclaredMethod("toString"); // Mock method
-        when(handlerMethod.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("executeRules");
+        configureHandlerMethod("RuleController", "executeRules");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
@@ -87,12 +80,9 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("AuthController login should whitelist only username and password")
-    void testAuthControllerLoginWhitelist() throws Exception {
+    void testAuthControllerLoginWhitelist() {
         // Arrange
-        when(handlerMethod.getBeanType()).thenReturn((Class) AuthController.class);
-        Method method = Object.class.getDeclaredMethod("toString");
-        when(handlerMethod.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("authenticateUser");
+        configureHandlerMethod("AuthController", "authenticateUser");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
@@ -104,12 +94,9 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("AuthController signup should whitelist user registration fields")
-    void testAuthControllerSignupWhitelist() throws Exception {
+    void testAuthControllerSignupWhitelist() {
         // Arrange
-        when(handlerMethod.getBeanType()).thenReturn((Class) AuthController.class);
-        Method method = Object.class.getDeclaredMethod("toString");
-        when(handlerMethod.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("registerUser");
+        configureHandlerMethod("AuthController", "registerUser");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
@@ -123,22 +110,18 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("FinancialMetricsController calculateMetrics should whitelist metrics fields")
-    void testFinancialMetricsControllerCalculateWhitelist() throws Exception {
+    void testFinancialMetricsControllerCalculateWhitelist() {
         // Arrange
-        when(handlerMethod.getBeanType()).thenReturn((Class) FinancialMetricsController.class);
-        Method method = Object.class.getDeclaredMethod("toString");
-        when(handlerMethod.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("calculateMetrics");
+        configureHandlerMethod("FinancialMetricsController", "calculateMetrics");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
 
         // Assert
         verify(binder).setAllowedFields(
-            "quoteId", "customerId", "monthlyPrice", "durationInMonths",
-            "expectedDuration", "customerType", "subscriptionType", "basePrice",
-            "customerTenureMonths", "productId"
-        );
+                "quoteId", "customerId", "monthlyPrice", "durationInMonths",
+                "expectedDuration", "customerType", "subscriptionType", "basePrice",
+                "customerTenureMonths", "productId");
         verify(binder).setAutoGrowNestedPaths(false);
     }
 
@@ -146,21 +129,17 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("AIRuleController createRule should whitelist AI rule creation fields")
-    void testAIRuleControllerCreateRuleWhitelist() throws Exception {
+    void testAIRuleControllerCreateRuleWhitelist() {
         // Arrange
-        when(handlerMethod.getBeanType()).thenReturn((Class) AIRuleController.class);
-        Method method = Object.class.getDeclaredMethod("toString");
-        when(handlerMethod.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("createRule");
+        configureHandlerMethod("AIRuleController", "createRule");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
 
         // Assert
         verify(binder).setAllowedFields(
-            "businessRequirement", "ruleType", "ruleName", "testFacts",
-            "includeDocumentation", "generateTestCases", "tags"
-        );
+                "businessRequirement", "ruleType", "ruleName", "testFacts",
+                "includeDocumentation", "generateTestCases", "tags");
         verify(binder).setAutoGrowNestedPaths(false);
     }
 
@@ -168,42 +147,30 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("Should set autoGrowNestedPaths to false for all controllers")
-    void testAutoGrowNestedPathsDisabled() throws Exception {
+    void testAutoGrowNestedPathsDisabled() {
         // Test RuleController
-        when(handlerMethod.getBeanType()).thenReturn((Class) RuleController.class);
-        Method method = Object.class.getDeclaredMethod("toString");
-        when(handlerMethod.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("deployRules");
-
+        configureHandlerMethod("RuleController", "deployRules");
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
         verify(binder).setAutoGrowNestedPaths(false);
 
         // Reset and test AuthController
         reset(binder);
-        when(handlerMethod.getBeanType()).thenReturn((Class) AuthController.class);
-        when(method.getName()).thenReturn("authenticateUser");
-
+        configureHandlerMethod("AuthController", "authenticateUser");
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
         verify(binder).setAutoGrowNestedPaths(false);
 
         // Reset and test FinancialMetricsController
         reset(binder);
-        when(handlerMethod.getBeanType()).thenReturn((Class) FinancialMetricsController.class);
-        when(method.getName()).thenReturn("calculateMetrics");
-
+        configureHandlerMethod("FinancialMetricsController", "calculateMetrics");
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
         verify(binder).setAutoGrowNestedPaths(false);
     }
 
     @Test
     @DisplayName("Unknown controller should use default restrictive whitelist")
-    void testUnknownControllerUsesDefaultWhitelist() throws Exception {
-        // Create a mock class that doesn't match any known controller
-        class UnknownController {}
-
-        when(handlerMethod.getBeanType()).thenReturn((Class) UnknownController.class);
-        Method method = Object.class.getDeclaredMethod("toString");
-        when(handlerMethod.getMethod()).thenReturn(method);
+    void testUnknownControllerUsesDefaultWhitelist() {
+        // Arrange
+        configureHandlerMethod("UnknownController", "someMethod");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
@@ -225,12 +192,9 @@ public class WebDataBinderConfigTest {
 
     @Test
     @DisplayName("GET endpoints should have empty whitelist")
-    void testGetEndpointsHaveEmptyWhitelist() throws Exception {
+    void testGetEndpointsHaveEmptyWhitelist() {
         // Arrange - RuleController GET method
-        when(handlerMethod.getBeanType()).thenReturn((Class) RuleController.class);
-        Method method = Object.class.getDeclaredMethod("toString");
-        when(handlerMethod.getMethod()).thenReturn(method);
-        when(method.getName()).thenReturn("getRuleSetMetadata");
+        configureHandlerMethod("RuleController", "getRuleSetMetadata");
 
         // Act
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
@@ -238,5 +202,28 @@ public class WebDataBinderConfigTest {
         // Assert
         verify(binder).setAllowedFields(); // Empty whitelist for GET
         verify(binder).setAutoGrowNestedPaths(false);
+    }
+
+    // ==================== Helper Methods ====================
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void configureHandlerMethod(String controllerName, String methodName) {
+        // Use real controller classes instead of mocking Class.class
+        // Mockito cannot mock final classes like Class.class
+        Class controllerClass = switch (controllerName) {
+            case "RuleController" -> com.example.pricerulesaidrools.drools.controller.RuleController.class;
+            case "AuthController" -> com.example.pricerulesaidrools.security.controller.AuthController.class;
+            case "FinancialMetricsController" ->
+                com.example.pricerulesaidrools.controller.FinancialMetricsController.class;
+            case "AIRuleController" -> com.example.pricerulesaidrools.ai.controller.AIRuleController.class;
+            case "HealthController" -> Object.class; // Use Object.class for non-existent controllers
+            default -> Object.class; // For UnknownController and other test cases
+        };
+
+        when(handlerMethod.getBeanType()).thenReturn(controllerClass);
+        // Mock Method is still acceptable since Method itself isn't final
+        Method mockMethod = Mockito.mock(Method.class, Mockito.withSettings().strictness(Strictness.LENIENT));
+        when(mockMethod.getName()).thenReturn(methodName);
+        when(handlerMethod.getMethod()).thenReturn(mockMethod);
     }
 }

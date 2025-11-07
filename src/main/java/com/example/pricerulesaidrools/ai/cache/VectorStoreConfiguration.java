@@ -23,7 +23,8 @@ import java.time.Duration;
 
 /**
  * Configuration class for Redis VectorStore used in semantic caching.
- * Provides beans for vector storage, embedding generation, and Redis connectivity.
+ * Provides beans for vector storage, embedding generation, and Redis
+ * connectivity.
  */
 @Slf4j
 @Configuration
@@ -72,7 +73,7 @@ public class VectorStoreConfiguration {
 
         LettucePoolingClientConfiguration poolConfig = LettucePoolingClientConfiguration.builder()
                 .commandTimeout(Duration.ofSeconds(60))
-                .poolConfig(new org.apache.commons.pool2.impl.GenericObjectPoolConfig())
+                .poolConfig(new org.apache.commons.pool2.impl.GenericObjectPoolConfig<>())
                 .build();
 
         return new LettuceConnectionFactory(redisConfig, poolConfig);
@@ -99,7 +100,9 @@ public class VectorStoreConfiguration {
     @Bean
     public OpenAiApi openAiApi() {
         log.info("Configuring OpenAI API with embedding model: {}", embeddingModel);
-        return new OpenAiApi(openAiApiKey);
+        return OpenAiApi.builder()
+                .apiKey(openAiApiKey)
+                .build();
     }
 
     /**

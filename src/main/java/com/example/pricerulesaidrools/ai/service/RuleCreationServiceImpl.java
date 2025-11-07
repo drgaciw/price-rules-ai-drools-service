@@ -8,15 +8,10 @@ import com.example.pricerulesaidrools.ai.dto.SequentialThinkingResponse;
 import com.example.pricerulesaidrools.drools.service.DroolsIntegrationService;
 import com.example.pricerulesaidrools.drools.dto.RuleDeploymentResult;
 import com.example.pricerulesaidrools.drools.dto.RuleValidationResult;
-import com.example.pricerulesaidrools.model.RuleCreationRecord;
-import com.example.pricerulesaidrools.repository.RuleCreationRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Implementation of the RuleCreationService interface.
  * This class coordinates the use of Sequential Thinking for generating
- * pricing rules from business requirements and integrates with the Drools engine.
+ * pricing rules from business requirements and integrates with the Drools
+ * engine.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,8 +35,7 @@ public class RuleCreationServiceImpl implements RuleCreationService {
     private final SequentialThinkingService sequentialThinkingService;
     private final Context7Service context7Service;
     private final DroolsIntegrationService droolsIntegrationService;
-    private final RuleCreationRecordRepository ruleCreationRecordRepository;
-    
+
     // Cache for storing created rules during the session
     private final Map<String, RuleCreationResponse> createdRules = new ConcurrentHashMap<>();
 
@@ -50,58 +45,58 @@ public class RuleCreationServiceImpl implements RuleCreationService {
     @Override
     public RuleCreationResponse createRule(RuleCreationRequest request) {
         log.info("Creating rule from business requirement");
-        
+
         try {
             // Generate rule using Sequential Thinking
             SequentialThinkingResponse generatedRule = sequentialThinkingService.generateRule(
                     request.getBusinessRequirement(),
                     request.getRuleType());
-            
+
             if (generatedRule == null || generatedRule.getRuleContent() == null) {
                 return createErrorResponse("Failed to generate rule content");
             }
-            
+
             // Deploy rule to Drools engine
             RuleDeploymentResult deploymentResult = droolsIntegrationService.deployRules(
                     generatedRule.getRuleContent());
-            
+
             if (!deploymentResult.isSuccessful()) {
-                return createErrorResponse("Failed to deploy rule: " + 
+                return createErrorResponse("Failed to deploy rule: " +
                         (deploymentResult.getMessage() != null ? deploymentResult.getMessage() : "Unknown error"));
             }
-            
+
             // Create response
             String ruleId = deploymentResult.getId();
             RuleCreationResponse response = RuleCreationResponse.builder()
                     .ruleId(ruleId)
-                    .ruleName(request.getRuleName() != null ? request.getRuleName() : 
-                            (generatedRule.getRuleName() != null ? generatedRule.getRuleName() : "Rule_" + ruleId))
+                    .ruleName(request.getRuleName() != null ? request.getRuleName()
+                            : (generatedRule.getRuleName() != null ? generatedRule.getRuleName() : "Rule_" + ruleId))
                     .ruleContent(generatedRule.getRuleContent())
                     .success(true)
                     .message("Rule created successfully")
                     .businessRequirement(request.getBusinessRequirement())
                     .createdAt(LocalDateTime.now())
                     .build();
-            
+
             // Add test cases if requested
             if (Boolean.TRUE.equals(request.getGenerateTestCases()) && generatedRule.getTestCases() != null) {
                 response.setTestCases(generatedRule.getTestCases());
-                
+
                 // Execute test cases if provided
                 if (request.getTestFacts() != null && !request.getTestFacts().isEmpty()) {
                     List<Map<String, Object>> testResults = executeTestCases(ruleId, request.getTestFacts());
                     response.setTestResults(testResults);
                 }
             }
-            
+
             // Add documentation if requested
             if (Boolean.TRUE.equals(request.getIncludeDocumentation()) && generatedRule.getReasoning() != null) {
                 response.setDocumentation(generatedRule.getReasoning());
             }
-            
+
             // Store the created rule
             createdRules.put(ruleId, response);
-            
+
             return response;
         } catch (Exception e) {
             log.error("Error creating rule: {}", e.getMessage(), e);
@@ -124,17 +119,17 @@ public class RuleCreationServiceImpl implements RuleCreationService {
     @Override
     public RuleCreationResponse validateRule(String ruleId) {
         log.info("Validating rule with ID: {}", ruleId);
-        
+
         try {
             // Get the stored rule
             RuleCreationResponse storedRule = createdRules.get(ruleId);
             if (storedRule == null) {
                 return createErrorResponse("Rule not found with ID: " + ruleId);
             }
-            
+
             // Validate the rule using Drools
             RuleValidationResult validationResult = droolsIntegrationService.validateRuleSet(ruleId);
-            
+
             // Create a copy of the stored rule with validation results
             RuleCreationResponse response = RuleCreationResponse.builder()
                     .ruleId(storedRule.getRuleId())
@@ -146,7 +141,7 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                     .documentation(storedRule.getDocumentation())
                     .createdAt(storedRule.getCreatedAt())
                     .build();
-            
+
             // Add validation messages
             if (validationResult.getErrors() != null && !validationResult.getErrors().isEmpty()) {
                 List<RuleCreationResponse.ValidationMessage> validationMessages = new ArrayList<>();
@@ -158,7 +153,7 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                 });
                 response.setValidationMessages(validationMessages);
             }
-            
+
             return response;
         } catch (Exception e) {
             log.error("Error validating rule: {}", e.getMessage(), e);
@@ -172,11 +167,11 @@ public class RuleCreationServiceImpl implements RuleCreationService {
     @Override
     public RuleCreationResponse analyzeRequirement(String requirement) {
         log.info("Analyzing business requirement");
-        
+
         try {
             // Use Sequential Thinking to analyze the requirement
             SequentialThinkingResponse analysis = sequentialThinkingService.analyzeBusinessRequirement(requirement);
-            
+
             // Create response
             return RuleCreationResponse.builder()
                     .ruleId(UUID.randomUUID().toString())
@@ -198,38 +193,38 @@ public class RuleCreationServiceImpl implements RuleCreationService {
     @Override
     public RuleCreationResponse improveRule(String ruleId, String feedback) {
         log.info("Improving rule with ID: {} based on feedback", ruleId);
-        
+
         try {
             // Get the stored rule
             RuleCreationResponse storedRule = createdRules.get(ruleId);
             if (storedRule == null) {
                 return createErrorResponse("Rule not found with ID: " + ruleId);
             }
-            
+
             // Create a thought request for improvement
-            String improvementThought = "Let's improve this rule based on the feedback: " + feedback + 
-                    "\n\nOriginal business requirement: " + storedRule.getBusinessRequirement() + 
+            String improvementThought = "Let's improve this rule based on the feedback: " + feedback +
+                    "\n\nOriginal business requirement: " + storedRule.getBusinessRequirement() +
                     "\n\nCurrent rule:\n" + storedRule.getRuleContent();
-            
+
             SequentialThinkingResponse improvedRule = sequentialThinkingService.generateRule(
-                    improvementThought, 
+                    improvementThought,
                     "improvement");
-            
+
             if (improvedRule == null || improvedRule.getUpdatedRule() == null) {
                 return createErrorResponse("Failed to improve rule content");
             }
-            
+
             // Deploy improved rule to Drools engine
             String improvedRuleContent = improvedRule.getUpdatedRule();
             RuleDeploymentResult deploymentResult = droolsIntegrationService.updateRules(
-                    improvedRuleContent, 
+                    improvedRuleContent,
                     storedRule.getRuleId());
-            
+
             if (!deploymentResult.isSuccessful()) {
-                return createErrorResponse("Failed to deploy improved rule: " + 
+                return createErrorResponse("Failed to deploy improved rule: " +
                         (deploymentResult.getMessage() != null ? deploymentResult.getMessage() : "Unknown error"));
             }
-            
+
             // Create response
             RuleCreationResponse response = RuleCreationResponse.builder()
                     .ruleId(storedRule.getRuleId())
@@ -238,35 +233,35 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                     .success(true)
                     .message("Rule improved successfully")
                     .businessRequirement(storedRule.getBusinessRequirement())
-                    .documentation(improvedRule.getReasoning() != null ? 
-                            improvedRule.getReasoning() : storedRule.getDocumentation())
+                    .documentation(improvedRule.getReasoning() != null ? improvedRule.getReasoning()
+                            : storedRule.getDocumentation())
                     .createdAt(LocalDateTime.now())
                     .build();
-            
+
             // Update the stored rule
             createdRules.put(storedRule.getRuleId(), response);
-            
+
             return response;
         } catch (Exception e) {
             log.error("Error improving rule: {}", e.getMessage(), e);
             return createErrorResponse("Error improving rule: " + e.getMessage());
         }
     }
-    
+
     /**
      * Helper method to execute test cases for a rule.
      * 
-     * @param ruleId The ID of the rule to test
+     * @param ruleId    The ID of the rule to test
      * @param testFacts The test facts to use
      * @return List of test results
      */
     private List<Map<String, Object>> executeTestCases(String ruleId, List<Map<String, Object>> testFacts) {
         List<Map<String, Object>> results = new ArrayList<>();
-        
+
         try {
             // Execute batch rules using Drools service
             List<Object> droolsResults = droolsIntegrationService.executeBatchRules(ruleId, testFacts);
-            
+
             // Map results
             for (int i = 0; i < testFacts.size(); i++) {
                 Map<String, Object> testResult = new HashMap<>();
@@ -283,10 +278,10 @@ public class RuleCreationServiceImpl implements RuleCreationService {
             errorResult.put("success", false);
             results.add(errorResult);
         }
-        
+
         return results;
     }
-    
+
     /**
      * Helper method to create an error response.
      * 
@@ -301,85 +296,84 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                 .createdAt(LocalDateTime.now())
                 .build();
     }
-    
+
     /**
      * {@inheritDoc}
      */
     @Override
     public RuleCreationResponse createDocumentationEnhancedRule(RuleCreationRequest request) {
         log.info("Creating documentation-enhanced rule from business requirement");
-        
+
         try {
             // Generate rule using Sequential Thinking
             SequentialThinkingResponse generatedRule = sequentialThinkingService.generateRule(
                     request.getBusinessRequirement(),
                     request.getRuleType());
-            
+
             if (generatedRule == null || generatedRule.getRuleContent() == null) {
                 return createErrorResponse("Failed to generate rule content");
             }
-            
+
             // Enhance the rule with documentation insights
             DocumentationEnhancementRequest enhancementRequest = DocumentationEnhancementRequest.builder()
                     .rulePattern(generatedRule.getRuleContent())
-                    .topic(request.getRuleType() != null ? 
-                            request.getRuleType() + " pricing rules" : "pricing rules")
+                    .topic(request.getRuleType() != null ? request.getRuleType() + " pricing rules" : "pricing rules")
                     .includeCodeExamples(true)
                     .includeBestPractices(true)
                     .build();
-            
-            DocumentationEnhancementResponse enhancedRule = 
-                    context7Service.enhanceRuleWithDocumentation(enhancementRequest);
-            
+
+            DocumentationEnhancementResponse enhancedRule = context7Service
+                    .enhanceRuleWithDocumentation(enhancementRequest);
+
             if (!enhancedRule.isEnhancedWithDocumentation()) {
                 log.warn("Rule could not be enhanced with documentation, using original rule");
             }
-            
+
             // Use the enhanced rule if available, otherwise use the original
-            String finalRuleContent = enhancedRule.isEnhancedWithDocumentation() && 
-                    enhancedRule.getEnhancedRuleContent() != null ? 
-                    enhancedRule.getEnhancedRuleContent() : generatedRule.getRuleContent();
-            
+            String finalRuleContent = enhancedRule.isEnhancedWithDocumentation() &&
+                    enhancedRule.getEnhancedRuleContent() != null ? enhancedRule.getEnhancedRuleContent()
+                            : generatedRule.getRuleContent();
+
             // Deploy rule to Drools engine
             RuleDeploymentResult deploymentResult = droolsIntegrationService.deployRules(finalRuleContent);
-            
+
             if (!deploymentResult.isSuccessful()) {
-                return createErrorResponse("Failed to deploy rule: " + 
+                return createErrorResponse("Failed to deploy rule: " +
                         (deploymentResult.getMessage() != null ? deploymentResult.getMessage() : "Unknown error"));
             }
-            
+
             // Create response
             String ruleId = deploymentResult.getId();
             RuleCreationResponse response = RuleCreationResponse.builder()
                     .ruleId(ruleId)
-                    .ruleName(request.getRuleName() != null ? request.getRuleName() : 
-                            (generatedRule.getRuleName() != null ? generatedRule.getRuleName() : "Rule_" + ruleId))
+                    .ruleName(request.getRuleName() != null ? request.getRuleName()
+                            : (generatedRule.getRuleName() != null ? generatedRule.getRuleName() : "Rule_" + ruleId))
                     .ruleContent(finalRuleContent)
                     .success(true)
                     .message("Documentation-enhanced rule created successfully")
                     .businessRequirement(request.getBusinessRequirement())
                     .createdAt(LocalDateTime.now())
                     .build();
-            
+
             // Add documentation
             if (enhancedRule.isEnhancedWithDocumentation()) {
                 StringBuilder docBuilder = new StringBuilder();
-                
+
                 if (enhancedRule.getDocumentation() != null) {
                     docBuilder.append("## Documentation\n\n")
                             .append(enhancedRule.getDocumentation())
                             .append("\n\n");
                 }
-                
-                if (enhancedRule.getImprovementSuggestions() != null && 
+
+                if (enhancedRule.getImprovementSuggestions() != null &&
                         !enhancedRule.getImprovementSuggestions().isEmpty()) {
                     docBuilder.append("## Improvement Suggestions\n\n");
-                    
-                    for (DocumentationEnhancementResponse.ImprovementSuggestion suggestion : 
-                            enhancedRule.getImprovementSuggestions()) {
+
+                    for (DocumentationEnhancementResponse.ImprovementSuggestion suggestion : enhancedRule
+                            .getImprovementSuggestions()) {
                         docBuilder.append("### ").append(suggestion.getTitle()).append("\n\n")
                                 .append(suggestion.getDescription()).append("\n\n");
-                        
+
                         if (suggestion.getExampleCode() != null) {
                             docBuilder.append("```\n")
                                     .append(suggestion.getExampleCode())
@@ -387,50 +381,50 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                         }
                     }
                 }
-                
+
                 if (enhancedRule.getEnhancementExplanation() != null) {
                     docBuilder.append("## Enhancement Explanation\n\n")
                             .append(enhancedRule.getEnhancementExplanation());
                 }
-                
+
                 response.setDocumentation(docBuilder.toString());
             }
-            
+
             // Add test cases if requested
             if (Boolean.TRUE.equals(request.getGenerateTestCases()) && generatedRule.getTestCases() != null) {
                 response.setTestCases(generatedRule.getTestCases());
-                
+
                 // Execute test cases if provided
                 if (request.getTestFacts() != null && !request.getTestFacts().isEmpty()) {
                     List<Map<String, Object>> testResults = executeTestCases(ruleId, request.getTestFacts());
                     response.setTestResults(testResults);
                 }
             }
-            
+
             // Store the created rule
             createdRules.put(ruleId, response);
-            
+
             return response;
         } catch (Exception e) {
             log.error("Error creating documentation-enhanced rule: {}", e.getMessage(), e);
             return createErrorResponse("Error creating documentation-enhanced rule: " + e.getMessage());
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */
     @Override
     public RuleCreationResponse enhanceRuleWithDocumentation(String ruleId, String topic) {
         log.info("Enhancing rule with ID: {} with documentation", ruleId);
-        
+
         try {
             // Get the stored rule
             RuleCreationResponse storedRule = createdRules.get(ruleId);
             if (storedRule == null) {
                 return createErrorResponse("Rule not found with ID: " + ruleId);
             }
-            
+
             // Enhance the rule with documentation
             DocumentationEnhancementRequest enhancementRequest = DocumentationEnhancementRequest.builder()
                     .rulePattern(storedRule.getRuleContent())
@@ -438,42 +432,42 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                     .includeCodeExamples(true)
                     .includeBestPractices(true)
                     .build();
-            
-            DocumentationEnhancementResponse enhancedRule = 
-                    context7Service.enhanceRuleWithDocumentation(enhancementRequest);
-            
+
+            DocumentationEnhancementResponse enhancedRule = context7Service
+                    .enhanceRuleWithDocumentation(enhancementRequest);
+
             if (!enhancedRule.isEnhancedWithDocumentation()) {
                 return createErrorResponse("Failed to enhance rule with documentation");
             }
-            
+
             // Update the rule in Drools engine
             RuleDeploymentResult deploymentResult = droolsIntegrationService.updateRules(
-                    enhancedRule.getEnhancedRuleContent(), 
+                    enhancedRule.getEnhancedRuleContent(),
                     storedRule.getRuleId());
-            
+
             if (!deploymentResult.isSuccessful()) {
-                return createErrorResponse("Failed to update rule: " + 
+                return createErrorResponse("Failed to update rule: " +
                         (deploymentResult.getMessage() != null ? deploymentResult.getMessage() : "Unknown error"));
             }
-            
+
             // Create documentation string
             StringBuilder docBuilder = new StringBuilder();
-            
+
             if (enhancedRule.getDocumentation() != null) {
                 docBuilder.append("## Documentation\n\n")
                         .append(enhancedRule.getDocumentation())
                         .append("\n\n");
             }
-            
-            if (enhancedRule.getImprovementSuggestions() != null && 
+
+            if (enhancedRule.getImprovementSuggestions() != null &&
                     !enhancedRule.getImprovementSuggestions().isEmpty()) {
                 docBuilder.append("## Improvement Suggestions\n\n");
-                
-                for (DocumentationEnhancementResponse.ImprovementSuggestion suggestion : 
-                        enhancedRule.getImprovementSuggestions()) {
+
+                for (DocumentationEnhancementResponse.ImprovementSuggestion suggestion : enhancedRule
+                        .getImprovementSuggestions()) {
                     docBuilder.append("### ").append(suggestion.getTitle()).append("\n\n")
                             .append(suggestion.getDescription()).append("\n\n");
-                    
+
                     if (suggestion.getExampleCode() != null) {
                         docBuilder.append("```\n")
                                 .append(suggestion.getExampleCode())
@@ -481,12 +475,12 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                     }
                 }
             }
-            
+
             if (enhancedRule.getEnhancementExplanation() != null) {
                 docBuilder.append("## Enhancement Explanation\n\n")
                         .append(enhancedRule.getEnhancementExplanation());
             }
-            
+
             // Create response
             RuleCreationResponse response = RuleCreationResponse.builder()
                     .ruleId(storedRule.getRuleId())
@@ -498,10 +492,10 @@ public class RuleCreationServiceImpl implements RuleCreationService {
                     .documentation(docBuilder.toString())
                     .createdAt(LocalDateTime.now())
                     .build();
-            
+
             // Update the stored rule
             createdRules.put(storedRule.getRuleId(), response);
-            
+
             return response;
         } catch (Exception e) {
             log.error("Error enhancing rule with documentation: {}", e.getMessage(), e);

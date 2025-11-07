@@ -14,14 +14,18 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * Global WebDataBinder configuration to prevent mass assignment vulnerabilities.
+ * Global WebDataBinder configuration to prevent mass assignment
+ * vulnerabilities.
  *
- * This class implements field whitelisting for all controllers to prevent attackers
- * from injecting unexpected fields into request objects. Each controller has specific
+ * This class implements field whitelisting for all controllers to prevent
+ * attackers
+ * from injecting unexpected fields into request objects. Each controller has
+ * specific
  * allowed fields based on their DTOs and use cases.
  *
  * OWASP Reference: A5:2021 – Security Misconfiguration
- * CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes
+ * CWE-915: Improperly Controlled Modification of Dynamically-Determined Object
+ * Attributes
  *
  * @author Security Team
  * @since 1.0.0
@@ -31,12 +35,14 @@ import jakarta.servlet.http.HttpServletRequest;
 public class WebDataBinderConfig {
 
     /**
-     * Global @InitBinder method that configures field whitelisting based on the controller.
-     * This method is called before each request binding to ensure only allowed fields
+     * Global @InitBinder method that configures field whitelisting based on the
+     * controller.
+     * This method is called before each request binding to ensure only allowed
+     * fields
      * are bound to the request objects.
      *
-     * @param binder The WebDataBinder to configure
-     * @param webRequest The current web request (for logging purposes)
+     * @param binder        The WebDataBinder to configure
+     * @param webRequest    The current web request (for logging purposes)
      * @param handlerMethod The handler method being invoked
      */
     @InitBinder
@@ -52,7 +58,7 @@ public class WebDataBinderConfig {
 
         // Log the binding configuration for audit purposes
         log.debug("Configuring field whitelist for controller: {}, method: {}",
-                 controllerName, methodName);
+                controllerName, methodName);
 
         // Configure whitelist based on controller and method
         switch (controllerName) {
@@ -95,10 +101,14 @@ public class WebDataBinderConfig {
         // Set additional security configurations
         binder.setAutoGrowNestedPaths(false); // Prevent nested path injection
 
+        // Apply global disallowed fields for security
+        setGlobalDisallowedFields(binder);
+
         // Log potential security issues
-        if (binder.getDisallowedFields() != null && binder.getDisallowedFields().length > 0) {
+        String[] disallowedFields = binder.getDisallowedFields();
+        if (disallowedFields != null && disallowedFields.length > 0) {
             log.info("Disallowed fields configured for {}.{}: {}",
-                    controllerName, methodName, String.join(", ", binder.getDisallowedFields()));
+                    controllerName, methodName, String.join(", ", disallowedFields));
         }
     }
 
@@ -112,19 +122,17 @@ public class WebDataBinderConfig {
             case "validateRules":
                 // RuleRequest fields
                 binder.setAllowedFields(
-                    "name",
-                    "description",
-                    "content",
-                    "version",
-                    "metadata"
-                );
+                        "name",
+                        "description",
+                        "content",
+                        "version",
+                        "metadata");
                 break;
             case "executeRules":
                 // RuleExecutionRequest fields
                 binder.setAllowedFields(
-                    "ruleSetId",
-                    "facts"
-                );
+                        "ruleSetId",
+                        "facts");
                 break;
             case "executeBatchRules":
                 // List of facts - handled differently
@@ -145,20 +153,18 @@ public class WebDataBinderConfig {
             case "authenticateUser":
                 // LoginRequest fields
                 binder.setAllowedFields(
-                    "username",
-                    "password"
-                );
+                        "username",
+                        "password");
                 break;
             case "registerUser":
                 // SignupRequest fields
                 binder.setAllowedFields(
-                    "username",
-                    "email",
-                    "password",
-                    "firstName",
-                    "lastName",
-                    "roles"
-                );
+                        "username",
+                        "email",
+                        "password",
+                        "firstName",
+                        "lastName",
+                        "roles");
                 break;
             default:
                 binder.setAllowedFields();
@@ -174,25 +180,23 @@ public class WebDataBinderConfig {
             case "calculateMetrics":
                 // FinancialMetricsRequest fields
                 binder.setAllowedFields(
-                    "quoteId",
-                    "customerId",
-                    "monthlyPrice",
-                    "durationInMonths",
-                    "expectedDuration",
-                    "customerType",
-                    "subscriptionType",
-                    "basePrice",
-                    "customerTenureMonths",
-                    "productId"
-                );
+                        "quoteId",
+                        "customerId",
+                        "monthlyPrice",
+                        "durationInMonths",
+                        "expectedDuration",
+                        "customerType",
+                        "subscriptionType",
+                        "basePrice",
+                        "customerTenureMonths",
+                        "productId");
                 break;
             case "applyPricingStrategy":
                 // PricingStrategyRequest fields
                 binder.setAllowedFields(
-                    "quoteId",
-                    "strategy",
-                    "parameters"
-                );
+                        "quoteId",
+                        "strategy",
+                        "parameters");
                 break;
             default:
                 // GET operations - no body
@@ -211,14 +215,13 @@ public class WebDataBinderConfig {
             case "createDocumentationEnhancedRule":
                 // RuleCreationRequest fields
                 binder.setAllowedFields(
-                    "businessRequirement",
-                    "ruleType",
-                    "ruleName",
-                    "testFacts",
-                    "includeDocumentation",
-                    "generateTestCases",
-                    "tags"
-                );
+                        "businessRequirement",
+                        "ruleType",
+                        "ruleName",
+                        "testFacts",
+                        "includeDocumentation",
+                        "generateTestCases",
+                        "tags");
                 break;
             case "analyzeRequirement":
             case "improveRule":
@@ -228,12 +231,11 @@ public class WebDataBinderConfig {
             case "enhanceWithDocumentation":
                 // DocumentationEnhancementRequest fields
                 binder.setAllowedFields(
-                    "topic",
-                    "rulePattern",
-                    "includeCodeExamples",
-                    "includeBestPractices",
-                    "context"
-                );
+                        "topic",
+                        "rulePattern",
+                        "includeCodeExamples",
+                        "includeBestPractices",
+                        "context");
                 break;
             default:
                 binder.setAllowedFields();
@@ -250,23 +252,21 @@ public class WebDataBinderConfig {
             case "updateTemplate":
                 // RuleTemplate fields
                 binder.setAllowedFields(
-                    "name",
-                    "description",
-                    "category",
-                    "templateContent",
-                    "variables",
-                    "tags",
-                    "version"
-                );
+                        "name",
+                        "description",
+                        "category",
+                        "templateContent",
+                        "variables",
+                        "tags",
+                        "version");
                 break;
             case "generateFromTemplate":
                 // Template generation request
                 binder.setAllowedFields(
-                    "templateId",
-                    "variables",
-                    "name",
-                    "description"
-                );
+                        "templateId",
+                        "variables",
+                        "name",
+                        "description");
                 break;
             default:
                 binder.setAllowedFields();
@@ -282,18 +282,16 @@ public class WebDataBinderConfig {
             case "detectConflicts":
                 // Conflict detection request
                 binder.setAllowedFields(
-                    "ruleSetIds",
-                    "checkLevel",
-                    "includeResolutions"
-                );
+                        "ruleSetIds",
+                        "checkLevel",
+                        "includeResolutions");
                 break;
             case "resolveConflict":
                 // Conflict resolution request
                 binder.setAllowedFields(
-                    "conflictId",
-                    "resolutionStrategy",
-                    "parameters"
-                );
+                        "conflictId",
+                        "resolutionStrategy",
+                        "parameters");
                 break;
             default:
                 binder.setAllowedFields();
@@ -309,12 +307,11 @@ public class WebDataBinderConfig {
             case "recordMetrics":
                 // Metrics recording request
                 binder.setAllowedFields(
-                    "customerId",
-                    "quoteId",
-                    "metrics",
-                    "timestamp",
-                    "source"
-                );
+                        "customerId",
+                        "quoteId",
+                        "metrics",
+                        "timestamp",
+                        "source");
                 break;
             default:
                 // Mostly GET operations
@@ -332,23 +329,21 @@ public class WebDataBinderConfig {
             case "runTestSuite":
                 // Test execution request
                 binder.setAllowedFields(
-                    "ruleSetId",
-                    "testCases",
-                    "testData",
-                    "expectedResults",
-                    "options"
-                );
+                        "ruleSetId",
+                        "testCases",
+                        "testData",
+                        "expectedResults",
+                        "options");
                 break;
             case "createTestCase":
                 // Test case creation
                 binder.setAllowedFields(
-                    "name",
-                    "description",
-                    "ruleSetId",
-                    "inputData",
-                    "expectedOutput",
-                    "tags"
-                );
+                        "name",
+                        "description",
+                        "ruleSetId",
+                        "inputData",
+                        "expectedOutput",
+                        "tags");
                 break;
             default:
                 binder.setAllowedFields();
@@ -379,12 +374,11 @@ public class WebDataBinderConfig {
      */
     private void setGlobalDisallowedFields(WebDataBinder binder) {
         binder.setDisallowedFields(
-            "class",
-            "Class",
-            "*.class",
-            "*.Class",
-            "classLoader",
-            "*.classLoader"
-        );
+                "class",
+                "Class",
+                "*.class",
+                "*.Class",
+                "classLoader",
+                "*.classLoader");
     }
 }

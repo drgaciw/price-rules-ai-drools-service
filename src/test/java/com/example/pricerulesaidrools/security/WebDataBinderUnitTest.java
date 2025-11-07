@@ -1,5 +1,6 @@
 package com.example.pricerulesaidrools.security;
 
+import com.example.pricerulesaidrools.security.config.WebDataBinderConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,13 +17,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for WebDataBinder field whitelisting configuration.
  *
- * These tests verify that the WebDataBinder correctly configures field whitelisting
+ * These tests verify that the WebDataBinder correctly configures field
+ * whitelisting
  * for each controller to prevent mass assignment vulnerabilities.
  *
  * @author Security Team
@@ -121,10 +122,9 @@ public class WebDataBinderUnitTest {
 
         // Assert
         verify(binder).setAllowedFields(
-            "quoteId", "customerId", "monthlyPrice", "durationInMonths",
-            "expectedDuration", "customerType", "subscriptionType", "basePrice",
-            "customerTenureMonths", "productId"
-        );
+                "quoteId", "customerId", "monthlyPrice", "durationInMonths",
+                "expectedDuration", "customerType", "subscriptionType", "basePrice",
+                "customerTenureMonths", "productId");
         verify(binder).setAutoGrowNestedPaths(false);
     }
 
@@ -141,9 +141,8 @@ public class WebDataBinderUnitTest {
 
         // Assert
         verify(binder).setAllowedFields(
-            "businessRequirement", "ruleType", "ruleName", "testFacts",
-            "includeDocumentation", "generateTestCases", "tags"
-        );
+                "businessRequirement", "ruleType", "ruleName", "testFacts",
+                "includeDocumentation", "generateTestCases", "tags");
         verify(binder).setAutoGrowNestedPaths(false);
     }
 
@@ -153,8 +152,8 @@ public class WebDataBinderUnitTest {
     @DisplayName("Should set autoGrowNestedPaths to false for all controllers")
     void testAutoGrowNestedPathsDisabled() throws NoSuchMethodException {
         // Test multiple controllers
-        String[] controllers = {"RuleController", "AuthController", "FinancialMetricsController"};
-        String[] methods = {"deployRules", "authenticateUser", "calculateMetrics"};
+        String[] controllers = { "RuleController", "AuthController", "FinancialMetricsController" };
+        String[] methods = { "deployRules", "authenticateUser", "calculateMetrics" };
 
         for (int i = 0; i < controllers.length; i++) {
             // Arrange
@@ -219,7 +218,8 @@ public class WebDataBinderUnitTest {
         webDataBinderConfig.initBinder(binder, webRequest, handlerMethod);
 
         // Assert
-        // Since these endpoints use Map<String, Object> params, they get special handling
+        // Since these endpoints use Map<String, Object> params, they get special
+        // handling
         verify(binder).setAutoGrowNestedPaths(false);
     }
 
@@ -230,16 +230,15 @@ public class WebDataBinderUnitTest {
     void testNoDangerousFieldsWhitelisted() throws NoSuchMethodException {
         // Define dangerous fields that should never be whitelisted
         Set<String> dangerousFields = new HashSet<>(Arrays.asList(
-            "class", "Class", "classLoader", "constructor", "__proto__",
-            "prototype", "exec", "eval", "Function", "setTimeout"
-        ));
+                "class", "Class", "classLoader", "constructor", "__proto__",
+                "prototype", "exec", "eval", "Function", "setTimeout"));
 
         // Test various controller methods
         String[][] controllerMethods = {
-            {"RuleController", "deployRules"},
-            {"AuthController", "authenticateUser"},
-            {"FinancialMetricsController", "calculateMetrics"},
-            {"AIRuleController", "createRule"}
+                { "RuleController", "deployRules" },
+                { "AuthController", "authenticateUser" },
+                { "FinancialMetricsController", "calculateMetrics" },
+                { "AIRuleController", "createRule" }
         };
 
         for (String[] pair : controllerMethods) {
@@ -247,12 +246,15 @@ public class WebDataBinderUnitTest {
             reset(binder);
             configureHandlerMethod(pair[0], pair[1]);
 
-            // Capture allowed fields
+            // Capture allowed fields (varargs method - arguments come as individual
+            // Strings)
             doAnswer(invocation -> {
-                String[] allowedFields = invocation.getArgument(0, String[].class);
-                if (allowedFields != null) {
-                    for (String field : allowedFields) {
-                        assertThat(dangerousFields).doesNotContain(field);
+                Object[] args = invocation.getArguments();
+                if (args != null && args.length > 0) {
+                    for (Object arg : args) {
+                        if (arg instanceof String) {
+                            assertThat(dangerousFields).doesNotContain((String) arg);
+                        }
                     }
                 }
                 return null;
@@ -268,10 +270,10 @@ public class WebDataBinderUnitTest {
     void testGetEndpointsHaveEmptyWhitelist() throws NoSuchMethodException {
         // GET methods that should have empty whitelist
         String[][] getEndpoints = {
-            {"RuleController", "getRuleSetMetadata"},
-            {"RuleController", "listRuleSets"},
-            {"FinancialMetricsController", "getHistoricalMetrics"},
-            {"FinancialMetricsController", "calculateChurnRisk"}
+                { "RuleController", "getRuleSetMetadata" },
+                { "RuleController", "listRuleSets" },
+                { "FinancialMetricsController", "getHistoricalMetrics" },
+                { "FinancialMetricsController", "calculateChurnRisk" }
         };
 
         for (String[] pair : getEndpoints) {
@@ -289,29 +291,24 @@ public class WebDataBinderUnitTest {
 
     // ==================== Helper Methods ====================
 
-    private void configureHandlerMethod(String controllerName, String methodName) throws NoSuchMethodException {
-        // Create a dummy class to represent the controller
-        Class<?> controllerClass = Object.class;
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private void configureHandlerMethod(String controllerName, String methodName) {
+        // Use real controller classes instead of mocking Class.class
+        // Mockito cannot mock final classes like Class.class
+        Class controllerClass = switch (controllerName) {
+            case "RuleController" -> com.example.pricerulesaidrools.drools.controller.RuleController.class;
+            case "AuthController" -> com.example.pricerulesaidrools.security.controller.AuthController.class;
+            case "FinancialMetricsController" ->
+                com.example.pricerulesaidrools.controller.FinancialMetricsController.class;
+            case "AIRuleController" -> com.example.pricerulesaidrools.ai.controller.AIRuleController.class;
+            case "HealthController" -> Object.class; // Use Object.class for non-existent controllers
+            case "RuleTemplateController" -> Object.class; // Use Object.class for template controller
+            default -> Object.class; // For UnknownController and other test cases
+        };
 
-        // Mock the HandlerMethod to return the controller name
-        when(handlerMethod.getBeanType()).thenAnswer(invocation -> {
-            return new Object() {
-                @Override
-                public String toString() {
-                    return controllerName;
-                }
+        when(handlerMethod.getBeanType()).thenReturn(controllerClass);
 
-                public Class<?> getClass() {
-                    return new Class() {
-                        @Override
-                        public String getSimpleName() {
-                            return controllerName;
-                        }
-                    };
-                }
-            }.getClass();
-        });
-
+        // Mock Method is still acceptable since Method itself isn't final
         Method mockMethod = mock(Method.class);
         when(mockMethod.getName()).thenReturn(methodName);
         when(handlerMethod.getMethod()).thenReturn(mockMethod);

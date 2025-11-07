@@ -62,7 +62,7 @@ spring:
       ttl: 3600
       embedding-model: text-embedding-ada-002
       index-name: semantic-cache-index
-      prefix: semantic:cache:
+      prefix: "semantic:cache:"
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml

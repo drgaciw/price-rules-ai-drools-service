@@ -21,7 +21,7 @@
         <drools.version>8.44.0.Final</drools.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
         <spring-ai.version>1.0.0-M6</spring-ai.version>
-        <lombok.version>1.18.30</lombok.version>
+        <lombok.version>1.18.36</lombok.version>
         <postgresql.version>42.7.1</postgresql.version>
         <redis.version>4.0.0</redis.version>
         <liquibase.version>4.26.0</liquibase.version>
