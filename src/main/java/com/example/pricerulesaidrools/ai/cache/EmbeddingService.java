@@ -3,6 +3,7 @@ package com.example.pricerulesaidrools.ai.cache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "spring.redis.vector-store", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class EmbeddingService {
 
     private final EmbeddingModel embeddingClient;
