@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 /**
  * Entity representing a role in the system for authorization
  */
-@Entity
-@Table(name = "roles")
+@Entity(name = "AppRole")
+@Table(name = "app_roles")
 @Data
 @Builder
 @NoArgsConstructor

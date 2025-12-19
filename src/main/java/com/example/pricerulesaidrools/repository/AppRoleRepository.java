@@ -10,7 +10,7 @@ import java.util.Optional;
  * Repository for the Role entity
  */
 @Repository
-public interface RoleRepository extends JpaRepository<Role, Long> {
+public interface AppRoleRepository extends JpaRepository<Role, Long> {
 
     /**
      * Finds a role by name

@@ -13,7 +13,7 @@ import java.util.Optional;
  * Repository for the User entity
  */
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface AppUserRepository extends JpaRepository<User, Long> {
 
     /**
      * Finds a user by username
@@ -45,7 +45,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @param roleName The role name
      * @return List of users with the given role
      */
-    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName")
+    @Query("SELECT u FROM AppUser u JOIN u.roles r WHERE r.name = :roleName")
     List<User> findByRole(@Param("roleName") String roleName);
 
     /**

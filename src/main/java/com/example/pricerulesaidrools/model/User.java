@@ -15,8 +15,8 @@ import java.util.Set;
 /**
  * Entity representing a user in the system
  */
-@Entity
-@Table(name = "users")
+@Entity(name = "AppUser")
+@Table(name = "app_users")
 @Data
 @Builder
 @NoArgsConstructor
